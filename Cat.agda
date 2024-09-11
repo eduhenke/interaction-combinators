@@ -91,15 +91,15 @@ F = record
 -- M : Category lzero lzero lzero
 -- M = SubCategory F M-Sub
 
-data MObj : ℕ → ℕ → Set where
-  μ : MObj 2 1
-  η : MObj 0 1
-  pad : ∀ {i o} → MObj i o → MObj 
+data MObj : ℕ → Set where
+  μ : MObj 2
+  η : MObj 0
+  _M+_ : ∀ {n m} → MObj n → MObj m → MObj (n + m)
 
 M : Category lzero lzero lzero
 M = record
-  { Obj = (Fin 2 → Fin 1) ⊎ (Fin 0 → Fin 1)
-  ; _⇒_ = λ x x₁ → {!   !}
+  { Obj = ∀ n → MObj n
+  ; _⇒_ = λ{a b → ∀ n m → MObj (n + {! !})}
   ; _≈_ = {!   !}
   ; id = {!   !}
   ; _∘_ = {!   !}
