@@ -3,10 +3,6 @@
 open import Cubical.Core.Everything
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Nat using (ℕ; zero; suc; _+_)
--- open import Cubical.Data.Nat.Properties using (+-assoc)
-import Data.Fin.Permutation as Permutation
-open import Data.Fin.Permutation using (Permutation; transpose; flip; _∘ₚ_)
-open import Data.Fin.Patterns
 
 +-identityʳ : ∀ (m : ℕ) → m + 0 ≡ m
 +-identityʳ zero = refl
@@ -26,18 +22,17 @@ variable
   k k₁ k₂ p q : ℕ
   n : Net i o
 
-Permutation-τ : Permutation 2 2
-Permutation-τ = Permutation.transpose 0F 1F
-
+infixl 5 _⨾_
+infixl 6 _⊕_[_,_]
 data Net where
   -- underlying category theory constructs
-  -- id₀ : Net 0 0
-  -- id₁ : Net 1 1
-  -- τ : Net 2 2
-  wiring : ∀ {i : ℕ} → Permutation i i → Net i i
-  _⊕_ : {{i ≡ i₁ + i₂}} → {{o ≡ o₁ + o₂}}
-    → Net i₁ o₁
+  id : ∀ {i} → Net i i
+  τ : Net 2 2
+  _⊕_[_,_] :
+      Net i₁ o₁
     → Net i₂ o₂
+    → i ≡ i₁ + i₂
+    → o ≡ o₁ + o₂
     ------------
     → Net i o
   _⨾_ : Net i k
@@ -51,8 +46,8 @@ data Net where
   ζ⁺ : Net 2 1
   ζ⁻ : Net 1 2
   
-  ⨾-id : n ⨾ wiring Permutation.id ≡ n
-  id-⨟ : wiring Permutation.id ⨾ n ≡ n
+  ⨾-id : n ⨾ id ≡ n
+  id-⨟ : id ⨾ n ≡ n
   ⨾-assoc : ∀ {a : Net i p} → {b : Net p q} → {c : Net q o}
     → ((a ⨾ b) ⨾ c) ≡ (a ⨾ (b ⨾ c))
   ⊕-assoc :
@@ -61,21 +56,11 @@ data Net where
     → {a : Net i₁ o₁}
     → {b : Net i₂ o₂}
     → {c : Net i₃ o₃}
-    → (
-      (_⊕_ {{i≡}} {{o≡}}
-        (_⊕_ {{refl}} {{refl}} a b) c)
-      ≡
-      (_⊕_ {{i≡ ∙ (+-assoc i₁ i₂ i₃)}} {{o≡ ∙ (+-assoc o₁ o₂ o₃)}}
-        a (_⊕_ {{refl}} {{refl}} b c)))
-  ⊕-empty : ∀ {a : Net i o} → ((_⊕_
-    {{sym (+-identityʳ i)}}
-    {{sym (+-identityʳ o)}}
-    a (wiring {0} Permutation.id)) ≡ a)
-  empty-⊕ : ∀ {i o : ℕ} {a : Net i o} → ((
-    _⊕_
-    {{sym (+-identityˡ i)}}
-    {{sym (+-identityˡ o)}}
-    (wiring {0} Permutation.id) a) ≡ a)
+    → ((a ⊕ b [ refl , refl ]) ⊕ c [ i≡ , o≡ ])
+      ≡ a ⊕ (b ⊕ c [ refl , refl ]) [ (i≡ ∙ (+-assoc i₁ i₂ i₃)) , (o≡ ∙ (+-assoc o₁ o₂ o₃)) ]
+
+  ⊕-empty : ∀ {a : Net i o} → ((a ⊕ (id {0}) [ sym (+-identityʳ i)  , sym (+-identityʳ o) ]) ≡ a)
+  empty-⊕ : ∀ {i o : ℕ} {a : Net i o} → (((id {0}) ⊕ a [ refl , refl ]) ≡ a)
 
   ⊕-⨾-dist :
       {{i≡ : i ≡ i₁ + i₂}}
@@ -85,34 +70,27 @@ data Net where
     → {a₂ : Net i₂ k₂}
     → {b₁ : Net k₁ o₁}
     → {b₂ : Net k₂ o₂}
-    → (_⊕_ {{i≡}} {{k≡}} a₁ a₂) ⨾ (_⊕_ {{k≡}} {{o≡}} b₁ b₂) ≡ (a₁ ⨾ b₁) ⊕ (a₂ ⨾ b₂)
+    → (a₁ ⊕ a₂ [ refl , refl ]) ⨾ (b₁ ⊕ b₂ [ refl , refl ]) ≡ (a₁ ⨾ b₁) ⊕ (a₂ ⨾ b₂) [ refl , refl ]
   
-  τ-τ : wiring Permutation-τ ⨾ wiring Permutation-τ ≡ wiring Permutation.id
+  τ-τ : τ ⨾ τ ≡ id
   ⨾-τ : ∀ {a : Net 1 1}
-    → (_⊕_ {{refl}} {{refl}} (wiring {1} Permutation.id) a) ⨾ (wiring Permutation-τ)
-    ≡ (wiring Permutation-τ) ⨾ (_⊕_ {{refl}} {{refl}} a (wiring {1} Permutation.id))
-infixl 5 _⨾_
-infixl 6 _⊕_
+    → (((id {1}) ⊕ a [ refl , refl ]) ⨾ τ)
+    ≡ (τ ⨾ (a ⊕ (id {1}) [ refl , refl ]))
 
-id : Net i i
-id = wiring Permutation.id
 
 id₀ : Net 0 0
-id₀ = wiring Permutation.id
+id₀ = id
 
 id₁ : Net 1 1
-id₁ = wiring Permutation.id
-
-τ : Net 2 2
-τ = wiring Permutation-τ
+id₁ = id
 
 ⨁⁺ : ∀ {k} → Net 0 1 → Net 0 k
-⨁⁺ {0} net = id
-⨁⁺ {suc k} net = _⊕_ {{refl}} {{refl}} net (⨁⁺ {k} net)
+⨁⁺ {0} net = id₀
+⨁⁺ {suc k} net = net ⊕ ⨁⁺ {k} net [ refl , refl ]
 
 ⨁⁻ : ∀ {k} → Net 1 0 → Net k 0
-⨁⁻ {0} net = id
-⨁⁻ {suc k} net = _⊕_ {{refl}} {{refl}} net (⨁⁻ {k} net)
+⨁⁻ {0} net = id₀
+⨁⁻ {suc k} net = net ⊕ ⨁⁻ {k} net [ refl , refl ]
 
 
 infix 1 _⟶_
@@ -121,8 +99,8 @@ data _⟶_ : ∀ {i o : ℕ} → Net i o → Net i o → Set where
   ε⁻ : ∀ {n : Net i 1} → (n ⨾ ε⁻) ⟶ ⨁⁻ ε⁻
   δ-δ : δ⁺ ⨾ δ⁻ ⟶ τ
   ζ-ζ : ζ⁺ ⨾ ζ⁻ ⟶ τ
-  δ-ζ : δ⁺ ⨾ ζ⁻ ⟶ (_⊕_ {{refl}} {{refl}} ζ⁻ ζ⁻) ⨾ (_⊕_ {{refl}} {{refl}} (_⊕_ {{refl}} {{refl}} id₁ τ) id₁) ⨾ (_⊕_ {{refl}} {{refl}} δ⁺ δ⁺)
-  ζ-δ : ζ⁺ ⨾ δ⁻ ⟶ (_⊕_ {{refl}} {{refl}} δ⁻ δ⁻) ⨾ (_⊕_ {{refl}} {{refl}} (_⊕_ {{refl}} {{refl}} id₁ τ) id₁) ⨾ (_⊕_ {{refl}} {{refl}} ζ⁺ ζ⁺)
+  δ-ζ : δ⁺ ⨾ ζ⁻ ⟶ (ζ⁻ ⊕ ζ⁻ [ refl , refl ]) ⨾ ((id₁ ⊕ τ [ refl , refl ]) ⊕ id₁ [ refl , refl ]) ⨾ (δ⁺ ⊕ δ⁺ [ refl , refl ])
+  ζ-δ : ζ⁺ ⨾ δ⁻ ⟶ (δ⁻ ⊕ δ⁻ [ refl , refl ]) ⨾ ((id₁ ⊕ τ [ refl , refl ]) ⊕ id₁ [ refl , refl ]) ⨾ (ζ⁺ ⊕ ζ⁺ [ refl , refl ])
 
 
 ε-ε⟶nothing : (ε⁺ ⨾ ε⁻) ⟶ id₀
@@ -141,4 +119,3 @@ data _⟶_ : ∀ {i o : ℕ} → Net i o → Net i o → Set where
   ≡⟨ cong (λ a → a ⨾ ε⁻ ⟶ id₀) (sym ⨾-id) ⟩
     (ε⁺ ⨾ id ⨾ ε⁻ ⟶ id₀)
   ∎
-
