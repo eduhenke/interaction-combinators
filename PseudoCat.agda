@@ -9,6 +9,9 @@ open import Relation.Binary using (IsEquivalence; Setoid)
 open import Data.Fin.Permutation using (Permutation; transpose; flip; _∘ₚ_) renaming (id to permutationId)
 open import Data.Fin.Patterns
 
+import Relation.Nullary using (¬_)
+import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax)
+
 open import Relation.Binary
 open import Level
 open import Relation.Binary.Construct.Closure.ReflexiveTransitive renaming (ε to Star-refl)
@@ -63,10 +66,6 @@ infixl 1 _∼_
 -- Small-step syntactical equivalence on nets
 data _∼_ : Rel (Net i o) 0ℓ where
   symm : n₁ ∼ n₂ → n₂ ∼ n₁
-  cong : (f : Net i₁ o₁ → Net i₂ o₂)
-    → n₁ ∼ n₂
-    ---------------
-    → f n₁ ∼ f n₂
   ⨾-id : n ⨾ id ∼ n
   id-⨾ : id ⨾ n ∼ n
   ⨾-assoc : ∀ {i o p q : ℕ} → {n₁ : Net i p} → {n₂ : Net p q} → {n₃ : Net q o}
@@ -86,7 +85,7 @@ data _∼_ : Rel (Net i o) 0ℓ where
   ⊗-empty : (_⊗_ {{Eq.sym (+-identityʳ i)}} {{Eq.sym (+-identityʳ o)}} n (id {0}) ∼ n)
   empty-⊗ : (_⊗_ {{Eq.sym (+-identityˡ i)}} {{Eq.sym (+-identityˡ o)}} (id {0}) n ∼ n)
 
-  dist :
+  distr :
       {{i≡ : i ≡ i₁ + i₂}}
     → {{o≡ : o ≡ o₁ + o₂}}
     → {{k≡ : k ≡ k₁ + k₂}}
@@ -99,6 +98,15 @@ data _∼_ : Rel (Net i o) 0ℓ where
   τ-τ : τ ⨾ τ ∼ id
   ⨾-τ : ∀ {n : Net 1 1} → (id₁ ⊗ n) ⨾ τ ∼ τ ⨾ (n ⊗ id₁)
 
+  -- structural transitivity
+  ⊗₁ : n₁ ∼ n₂ → n₁ ⊗ n ∼ n₂ ⊗ n
+  ⊗₂ : n₁ ∼ n₂ → n ⊗ n₁ ∼ n ⊗ n₂
+  ⨾₁ : n₁ ∼ n₂ → n₁ ⨾ n ∼ n₂ ⨾ n
+  ⨾₂ : n₁ ∼ n₂ → n ⨾ n₁ ∼ n ⨾ n₂
+
+-- Big-step syntactical equivalence
+_∼*_ : Rel (Net i o) 0ℓ
+_∼*_ = Star _∼_
 
 infix 5 _⟶_
 -- Small-step reduction relation
@@ -112,6 +120,11 @@ data _⟶_ : Rel (Net i o) 0ℓ where
   ζ-ζ : ζ⁺ ⨾ ζ⁻ ⟶ τ
   δ-ζ : δ⁺ ⨾ ζ⁻ ⟶ ζ⁻ ⊗ ζ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ δ⁺ ⊗ δ⁺
   ζ-δ : ζ⁺ ⨾ δ⁻ ⟶ δ⁻ ⊗ δ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ ζ⁺ ⊗ ζ⁺
+  -- structural transitivity
+  ⊗₁ : n₁ ⟶ n₂ → n₁ ⊗ n ⟶ n₂ ⊗ n
+  ⊗₂ : n₁ ⟶ n₂ → n ⊗ n₁ ⟶ n ⊗ n₂
+  ⨾₁ : n₁ ⟶ n₂ → n₁ ⨾ n ⟶ n₂ ⨾ n
+  ⨾₂ : n₁ ⟶ n₂ → n ⨾ n₁ ⟶ n ⨾ n₂
 
 -- Small-step equivalence
 data _≃'_ : Rel (Net i o) 0ℓ where
@@ -166,20 +179,35 @@ open ≃-Reasoning
 
 ε-id-ε→empty : ε⁺ ⨾ id ⨾ ε⁻ ≃ id₀
 ε-id-ε→empty = begin
-  ε⁺ ⨾ id ⨾ ε⁻  ∼⟨ cong (_⨾ ε⁻) ⨾-id ⟩
+  ε⁺ ⨾ id ⨾ ε⁻  ∼⟨ ⨾₁ ⨾-id ⟩
   ε⁺ ⨾ ε⁻       ⟶⟨ ε-ε ⟩
   id₀           ∎
 
 ε-id-ε-id→empty : ε⁺ ⨾ id ⨾ ε⁻ ⨾ id ≃ id₀
 ε-id-ε-id→empty = begin
   ε⁺ ⨾ id ⨾ ε⁻ ⨾ id  ∼⟨ ⨾-id ⟩
-  ε⁺ ⨾ id ⨾ ε⁻       ∼⟨ cong (_⨾ ε⁻) ⨾-id ⟩
+  ε⁺ ⨾ id ⨾ ε⁻       ∼⟨ ⨾₁ ⨾-id ⟩
   ε⁺ ⨾ ε⁻            ⟶⟨ ε-ε ⟩
   id₀                ∎
 
 δ-id-δ→τ : (δ⁺ ⨾ id ⨾ δ⁻) ≃ τ
 δ-id-δ→τ = begin
-  δ⁺ ⨾ id ⨾ δ⁻  ∼⟨ cong (_⨾ δ⁻) ⨾-id ⟩
+  δ⁺ ⨾ id ⨾ δ⁻  ∼⟨ ⨾₁ ⨾-id ⟩
   δ⁺ ⨾ δ⁻       ⟶⟨ δ-δ ⟩
   τ             ∎
- 
+
+δ²⨾δ² : δ⁺ ⊗ δ⁺ ⨾ δ⁻ ⊗ δ⁻ ≃ τ ⊗ τ
+δ²⨾δ² = begin
+  δ⁺ ⊗ δ⁺ ⨾ δ⁻ ⊗ δ⁻     ∼⟨ distr ⟩
+  (δ⁺ ⨾ δ⁻) ⊗ (δ⁺ ⨾ δ⁻) ⟶⟨ ⊗₁ δ-δ ⟩
+  τ ⊗ (δ⁺ ⨾ δ⁻)         ⟶⟨ ⊗₂ δ-δ ⟩
+  τ ⊗ τ                 ∎
+
+-- ≃-confluent :
+--     n ≃ n₁
+--   → n ≃ n₂
+--   → n₁ ≃ n₂
+-- ≃-confluent Star-refl Star-refl = Star-refl
+-- ≃-confluent Star-refl x = x
+-- ≃-confluent (x ◅ x₁) Star-refl = {!   !}
+-- ≃-confluent (x ◅ x₁) (x₂ ◅ y) = {!   !}
