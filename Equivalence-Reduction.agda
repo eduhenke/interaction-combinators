@@ -11,17 +11,15 @@ open import Data.Fin.Patterns
 open import Function.Base hiding (id)
 
 open import Relation.Nullary using (¬_)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_)
+open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 
 open import Relation.Binary
 open import Level
 open import Relation.Binary.Construct.Closure.ReflexiveTransitive renaming (ε to ⊘)
+import Relation.Binary.Construct.Closure.ReflexiveTransitive as Star
 open import Relation.Binary.Construct.Closure.Symmetric
 open import Relation.Binary.Construct.Closure.Equivalence hiding (reflexive; transitive)
--- import Relation.Binary.Reasoning.Base.Single as Rel-Reasoning
--- import Relation.Binary.Reasoning.Setoid as Setoid-Reasoning
-
-import Relation.Binary.Rewriting
+open import Relation.Binary.Rewriting
 
 data Net : ℕ → ℕ → Set
 
@@ -129,6 +127,7 @@ data _⟶ʳ_ : Rel (Net i o) 0ℓ where
   ⨾₁ : n₁ ⟶ʳ n₂ → n₁ ⨾ n ⟶ʳ n₂ ⨾ n
   ⨾₂ : n₁ ⟶ʳ n₂ → n ⨾ n₁ ⟶ʳ n ⨾ n₂
 
+
 infix  2 _⟶_
 _⟶_ : Rel (Net i o) 0ℓ
 n₁ ⟶ n₂ = ∃ λ k → n₁ ~ k × k ⟶ʳ n₂
@@ -137,7 +136,6 @@ n₁ ⟶ n₂ = ∃ λ k → n₁ ~ k × k ⟶ʳ n₂
 infix  2 _⟶*_
 _⟶*_ : Rel (Net i o) 0ℓ
 _⟶*_ = Star _⟶_
-
 
 module ⟶-Reasoning where
   infixr 2 step-⟶ʳ
@@ -164,32 +162,114 @@ module ⟶-Reasoning where
 
 open ⟶-Reasoning
 
-ε-ε→empty : ε⁺ ⨾ ε⁻ ⟶* id₀
-ε-ε→empty =
-  ε⁺ ⨾ ε⁻   ⟶ʳ⟨ ε-ε ⟩
-  id₀       ∎
+module ⟶-examples where
+  ε-ε→empty : ε⁺ ⨾ ε⁻ ⟶* id₀
+  ε-ε→empty =
+    ε⁺ ⨾ ε⁻   ⟶ʳ⟨ ε-ε ⟩
+    id₀       ∎
 
-ε-id-ε→empty : ε⁺ ⨾ id ⨾ ε⁻ ⟶* id₀
-ε-id-ε→empty = 
-  ε⁺ ⨾ id ⨾ ε⁻ ~⟨ fwd (⨾₁ ⨾-id) ◅ ⊘ ⟩
-  ε⁺ ⨾ ε⁻     ⟶⟨ ε-ε ⟩
-  id₀         ∎
+  ε-id-ε→empty : ε⁺ ⨾ id ⨾ ε⁻ ⟶* id₀
+  ε-id-ε→empty = 
+    ε⁺ ⨾ id ⨾ ε⁻ ~⟨ fwd (⨾₁ ⨾-id) ◅ ⊘ ⟩
+    ε⁺ ⨾ ε⁻     ⟶⟨ ε-ε ⟩
+    id₀         ∎
 
-ε-id-ε-id→empty : ε⁺ ⨾ id ⨾ ε⁻ ⨾ id ⟶* id₀
-ε-id-ε-id→empty =
-  ε⁺ ⨾ id ⨾ ε⁻ ⨾ id    ~⟨ fwd ⨾-id ◅ fwd (⨾₁ ⨾-id) ◅ ⊘ ⟩
-  ε⁺ ⨾ ε⁻             ⟶⟨ ε-ε ⟩
-  id₀                 ∎
+  ε-id-ε-id→empty : ε⁺ ⨾ id ⨾ ε⁻ ⨾ id ⟶* id₀
+  ε-id-ε-id→empty =
+    ε⁺ ⨾ id ⨾ ε⁻ ⨾ id    ~⟨ fwd ⨾-id ◅ fwd (⨾₁ ⨾-id) ◅ ⊘ ⟩
+    ε⁺ ⨾ ε⁻             ⟶⟨ ε-ε ⟩
+    id₀                 ∎
 
-δ-id-δ→τ : (δ⁺ ⨾ id ⨾ δ⁻) ⟶* τ
-δ-id-δ→τ =
-  δ⁺ ⨾ id ⨾ δ⁻ ~⟨ fwd (⨾₁ ⨾-id) ◅ ⊘ ⟩
-  δ⁺ ⨾ δ⁻      ⟶⟨ δ-δ ⟩
-  τ            ∎
+  δ-id-δ→τ : (δ⁺ ⨾ id ⨾ δ⁻) ⟶* τ
+  δ-id-δ→τ =
+    δ⁺ ⨾ id ⨾ δ⁻ ~⟨ fwd (⨾₁ ⨾-id) ◅ ⊘ ⟩
+    δ⁺ ⨾ δ⁻      ⟶⟨ δ-δ ⟩
+    τ            ∎
 
-δ²⨾δ² : δ⁺ ⊗ δ⁺ ⨾ δ⁻ ⊗ δ⁻ ⟶* τ ⊗ τ
-δ²⨾δ² =
-  δ⁺ ⊗ δ⁺ ⨾ δ⁻ ⊗ δ⁻     ~⟨ fwd distr ◅ ⊘ ⟩
-  (δ⁺ ⨾ δ⁻) ⊗ (δ⁺ ⨾ δ⁻)  ⟶⟨ ⊗₁ δ-δ ⟩
-  τ ⊗ (δ⁺ ⨾ δ⁻)          ⟶ʳ⟨ ⊗₂ δ-δ ⟩
-  (τ ⊗ τ)                   ∎
+  δ²⨾δ² : δ⁺ ⊗ δ⁺ ⨾ δ⁻ ⊗ δ⁻ ⟶* τ ⊗ τ
+  δ²⨾δ² =
+    δ⁺ ⊗ δ⁺ ⨾ δ⁻ ⊗ δ⁻     ~⟨ fwd distr ◅ ⊘ ⟩
+    (δ⁺ ⨾ δ⁻) ⊗ (δ⁺ ⨾ δ⁻)  ⟶⟨ ⊗₁ δ-δ ⟩
+    τ ⊗ (δ⁺ ⨾ δ⁻)          ⟶ʳ⟨ ⊗₂ δ-δ ⟩
+    (τ ⊗ τ)                   ∎
+
+_⟶ʳ*_ : Rel (Net i o) 0ℓ
+_⟶ʳ*_ = Star _⟶ʳ_
+
+⊗₁* : ∀ {i o i′ o′ : ℕ} {a b : Net i o} {k : Net i′ o′}
+  → a ⟶ʳ* b
+  → (a ⊗ k) ⟶ʳ* (b ⊗ k)
+⊗₁* ⊘ = ⊘
+⊗₁* (a⟶j ◅ j⟶*b) = ⊗₁ a⟶j ◅ ⊗₁* j⟶*b
+
+⊗₂* : ∀ {i o i′ o′ : ℕ} {a b : Net i o} {k : Net i′ o′}
+  → a ⟶ʳ* b
+  → (k ⊗ a) ⟶ʳ* (k ⊗ b)
+⊗₂* ⊘ = ⊘
+⊗₂* (a⟶j ◅ j⟶*b) = ⊗₂ a⟶j ◅ ⊗₂* j⟶*b
+
+⨾₁* : ∀ {i m o : ℕ} {a b : Net i m} {k : Net m o}
+  → a ⟶ʳ* b
+  → (a ⨾ k) ⟶ʳ* (b ⨾ k)
+⨾₁* ⊘ = ⊘
+⨾₁* (a⟶j ◅ j⟶*b) = ⨾₁ a⟶j ◅ ⨾₁* j⟶*b
+
+⨾₂* : ∀ {i m o : ℕ} {a b : Net m o} {k : Net i m}
+  → a ⟶ʳ* b
+  → (k ⨾ a) ⟶ʳ* (k ⨾ b)
+⨾₂* ⊘ = ⊘
+⨾₂* (a⟶j ◅ j⟶*b) = ⨾₂ a⟶j ◅ ⨾₂* j⟶*b
+
+{-# TERMINATING #-} -- TODO: remove
+⟶ʳ-confluent : ∀ {i o : ℕ} → Confluent (_⟶ʳ_ {i} {o})
+-- trivial empty cases
+⟶ʳ-confluent {A = a} ⊘ ⊘ = a , ⊘ , ⊘
+⟶ʳ-confluent {C = c} ⊘ a⟶*c = c , (a⟶*c , ⊘)
+⟶ʳ-confluent {B = b} a⟶*b ⊘ = b , (⊘ , a⟶*b)
+-- atomic cases
+⟶ʳ-confluent (ε-δ ◅ a⟶*b) (ε-δ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+⟶ʳ-confluent (ε-ζ ◅ a⟶*b) (ε-ζ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+⟶ʳ-confluent (ε-ε ◅ a⟶*b) (ε-ε ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+⟶ʳ-confluent (δ-ε ◅ a⟶*b) (δ-ε ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+⟶ʳ-confluent (ζ-ε ◅ a⟶*b) (ζ-ε ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+⟶ʳ-confluent (δ-δ ◅ a⟶*b) (δ-δ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+⟶ʳ-confluent (ζ-ζ ◅ a⟶*b) (ζ-ζ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+⟶ʳ-confluent (δ-ζ ◅ a⟶*b) (δ-ζ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+⟶ʳ-confluent (ζ-δ ◅ a⟶*b) (ζ-δ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
+-- structural transitivity cases
+⟶ʳ-confluent {A = a} {B = b} {C = c} ((⊗₁ a⟶b) ◅ ⊘) ((⊗₁ a⟶c) ◅ ⊘) =
+  let d , b⟶d , c⟶d = ⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘)
+  in (d ⊗ _) , ⊗₁* b⟶d , ⊗₁* c⟶d
+⟶ʳ-confluent {A = a} {B = b} {C = c} ((⊗₁ a⟶b) ◅ ⊘) ((⊗₂ a⟶c) ◅ ⊘) =
+  _ , ⊗₂ a⟶c ◅ ⊘ , ⊗₁ a⟶b ◅ ⊘
+⟶ʳ-confluent {A = a} {B = b} {C = c} ((⊗₂ a⟶b) ◅ ⊘) ((⊗₁ a⟶c) ◅ ⊘) =
+  _ , ⊗₁ a⟶c ◅ ⊘ , ⊗₂ a⟶b ◅ ⊘
+⟶ʳ-confluent {A = a} {B = b} {C = c} ((⊗₂ a⟶b) ◅ ⊘) ((⊗₂ a⟶c) ◅ ⊘) =
+  let d , b⟶d , c⟶d = ⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘)
+  in (_ ⊗ d) , ⊗₂* b⟶d , ⊗₂* c⟶d
+⟶ʳ-confluent {A = a} {B = b} {C = c} ((⨾₁ a⟶b) ◅ ⊘) ((⨾₁ a⟶c) ◅ ⊘) =
+  let d , b⟶d , c⟶d = ⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘)
+  in (d ⨾ _) , ⨾₁* b⟶d , ⨾₁* c⟶d
+⟶ʳ-confluent {A = a} {B = b} {C = c} ((⨾₁ a⟶b) ◅ ⊘) ((⨾₂ a⟶c) ◅ ⊘) =
+  _ , ⨾₂ a⟶c ◅ ⊘ , ⨾₁ a⟶b ◅ ⊘
+⟶ʳ-confluent {A = a} {B = b} {C = c} ((⨾₂ a⟶b) ◅ ⊘) ((⨾₁ a⟶c) ◅ ⊘) =
+  _ , ⨾₁ a⟶c ◅ ⊘ , ⨾₂ a⟶b ◅ ⊘
+⟶ʳ-confluent {A = a} {B = b} {C = c} ((⨾₂ a⟶b) ◅ ⊘) ((⨾₂ a⟶c) ◅ ⊘) =
+  let d , b⟶d , c⟶d = ⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘)
+  in (_ ⨾ d) , ⨾₂* b⟶d , ⨾₂* c⟶d
+-- general inductive step
+⟶ʳ-confluent {A = a} {B = b} {C = c} (a⟶b′ ◅ b′⟶*b) (a⟶c′ ◅ c′⟶*c) = {!   !}
+  -- let
+  --   d , b′⟶*d , c′⟶*d = ⟶ʳ-confluent (a⟶b′ ◅ ⊘) (a⟶c′ ◅ ⊘)
+  --   e , d⟶*e , b⟶*e = ⟶ʳ-confluent b′⟶*d b′⟶*b
+  --   f , d⟶*f , c⟶*f = ⟶ʳ-confluent c′⟶*d c′⟶*c
+  --   g , e⟶*g , f⟶*g = ⟶ʳ-confluent d⟶*e d⟶*f
+  --   b⟶*g = b⟶*e ◅◅ e⟶*g
+  --   c⟶*g = c⟶*f ◅◅ f⟶*g
+  -- in
+  --   g , b⟶*g , c⟶*g
+
+
+-- confluent-example₁ = 
+--   let a = ⟶ʳ-confluent (⨾₁ (⊗₁ ε-ε) ◅ ⨾₂ ε-ε ◅ ⊘) (⨾₁ (⊗₂ ε-ε) ◅ ⨾₁ ((⊗₁ ε-ε)) ◅ ⊘)
+--   in {!   !}
