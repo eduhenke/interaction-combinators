@@ -220,44 +220,48 @@ _⟶ʳ*_ = Star _⟶ʳ_
 ⨾₂* ⊘ = ⊘
 ⨾₂* (a⟶j ◅ j⟶*b) = ⨾₂ a⟶j ◅ ⨾₂* j⟶*b
 
+⟶ʳ-weakly-confluent : ∀ {i o : ℕ} → WeaklyConfluent (_⟶ʳ_ {i} {o})
+-- atomic cases
+⟶ʳ-weakly-confluent ε-δ ε-δ = _ , ⊘ , ⊘
+⟶ʳ-weakly-confluent ε-ζ ε-ζ = _ , ⊘ , ⊘
+⟶ʳ-weakly-confluent ε-ε ε-ε = _ , ⊘ , ⊘
+⟶ʳ-weakly-confluent δ-ε δ-ε = _ , ⊘ , ⊘
+⟶ʳ-weakly-confluent ζ-ε ζ-ε = _ , ⊘ , ⊘
+⟶ʳ-weakly-confluent δ-δ δ-δ = _ , ⊘ , ⊘
+⟶ʳ-weakly-confluent ζ-ζ ζ-ζ = _ , ⊘ , ⊘
+⟶ʳ-weakly-confluent δ-ζ δ-ζ = _ , ⊘ , ⊘
+⟶ʳ-weakly-confluent ζ-δ ζ-δ = _ , ⊘ , ⊘
+-- structural transitivity cases
+⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⊗₁ a⟶b) (⊗₁ a⟶c) =
+  let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
+  in (d ⊗ _) , ⊗₁* b⟶d , ⊗₁* c⟶d
+⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⊗₁ a⟶b) (⊗₂ a⟶c) =
+  _ , ⊗₂ a⟶c ◅ ⊘ , ⊗₁ a⟶b ◅ ⊘
+⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⊗₂ a⟶b) (⊗₁ a⟶c) =
+  _ , ⊗₁ a⟶c ◅ ⊘ , ⊗₂ a⟶b ◅ ⊘
+⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⊗₂ a⟶b) (⊗₂ a⟶c) =
+  let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
+  in (_ ⊗ d) , ⊗₂* b⟶d , ⊗₂* c⟶d
+⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⨾₁ a⟶b) (⨾₁ a⟶c) =
+  let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
+  in (d ⨾ _) , ⨾₁* b⟶d , ⨾₁* c⟶d
+⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⨾₁ a⟶b) (⨾₂ a⟶c) =
+  _ , ⨾₂ a⟶c ◅ ⊘ , ⨾₁ a⟶b ◅ ⊘
+⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⨾₂ a⟶b) (⨾₁ a⟶c) =
+  _ , ⨾₁ a⟶c ◅ ⊘ , ⨾₂ a⟶b ◅ ⊘
+⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⨾₂ a⟶b) (⨾₂ a⟶c) =
+  let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
+  in (_ ⨾ d) , ⨾₂* b⟶d , ⨾₂* c⟶d
+
 ⟶ʳ-confluent : ∀ {i o : ℕ} → Confluent (_⟶ʳ_ {i} {o})
 -- trivial empty cases
 ⟶ʳ-confluent {A = a} ⊘ ⊘ = a , ⊘ , ⊘
 ⟶ʳ-confluent {C = c} ⊘ a⟶*c = c , (a⟶*c , ⊘)
 ⟶ʳ-confluent {B = b} a⟶*b ⊘ = b , (⊘ , a⟶*b)
 -- atomic cases
-⟶ʳ-confluent (ε-δ ◅ a⟶*b) (ε-δ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
-⟶ʳ-confluent (ε-ζ ◅ a⟶*b) (ε-ζ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
-⟶ʳ-confluent (ε-ε ◅ a⟶*b) (ε-ε ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
-⟶ʳ-confluent (δ-ε ◅ a⟶*b) (δ-ε ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
-⟶ʳ-confluent (ζ-ε ◅ a⟶*b) (ζ-ε ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
-⟶ʳ-confluent (δ-δ ◅ a⟶*b) (δ-δ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
-⟶ʳ-confluent (ζ-ζ ◅ a⟶*b) (ζ-ζ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
-⟶ʳ-confluent (δ-ζ ◅ a⟶*b) (δ-ζ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
-⟶ʳ-confluent (ζ-δ ◅ a⟶*b) (ζ-δ ◅ a⟶*c) = ⟶ʳ-confluent a⟶*b a⟶*c
--- structural transitivity cases
-⟶ʳ-confluent {A = a} {B = b} {C = c} ((⊗₁ a⟶b) ◅ ⊘) ((⊗₁ a⟶c) ◅ ⊘) =
-  let d , b⟶d , c⟶d = ⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘)
-  in (d ⊗ _) , ⊗₁* b⟶d , ⊗₁* c⟶d
-⟶ʳ-confluent {A = a} {B = b} {C = c} ((⊗₁ a⟶b) ◅ ⊘) ((⊗₂ a⟶c) ◅ ⊘) =
-  _ , ⊗₂ a⟶c ◅ ⊘ , ⊗₁ a⟶b ◅ ⊘
-⟶ʳ-confluent {A = a} {B = b} {C = c} ((⊗₂ a⟶b) ◅ ⊘) ((⊗₁ a⟶c) ◅ ⊘) =
-  _ , ⊗₁ a⟶c ◅ ⊘ , ⊗₂ a⟶b ◅ ⊘
-⟶ʳ-confluent {A = a} {B = b} {C = c} ((⊗₂ a⟶b) ◅ ⊘) ((⊗₂ a⟶c) ◅ ⊘) =
-  let d , b⟶d , c⟶d = ⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘)
-  in (_ ⊗ d) , ⊗₂* b⟶d , ⊗₂* c⟶d
-⟶ʳ-confluent {A = a} {B = b} {C = c} ((⨾₁ a⟶b) ◅ ⊘) ((⨾₁ a⟶c) ◅ ⊘) =
-  let d , b⟶d , c⟶d = ⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘)
-  in (d ⨾ _) , ⨾₁* b⟶d , ⨾₁* c⟶d
-⟶ʳ-confluent {A = a} {B = b} {C = c} ((⨾₁ a⟶b) ◅ ⊘) ((⨾₂ a⟶c) ◅ ⊘) =
-  _ , ⨾₂ a⟶c ◅ ⊘ , ⨾₁ a⟶b ◅ ⊘
-⟶ʳ-confluent {A = a} {B = b} {C = c} ((⨾₂ a⟶b) ◅ ⊘) ((⨾₁ a⟶c) ◅ ⊘) =
-  _ , ⨾₁ a⟶c ◅ ⊘ , ⨾₂ a⟶b ◅ ⊘
-⟶ʳ-confluent {A = a} {B = b} {C = c} ((⨾₂ a⟶b) ◅ ⊘) ((⨾₂ a⟶c) ◅ ⊘) =
-  let d , b⟶d , c⟶d = ⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘)
-  in (_ ⨾ d) , ⨾₂* b⟶d , ⨾₂* c⟶d
--- general inductive step
-⟶ʳ-confluent {A = a} {B = b} {C = c} (a⟶b′ ◅ b′⟶*b) (a⟶c′ ◅ c′⟶*c) = {!   !}
+⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘) = ⟶ʳ-weakly-confluent a⟶b a⟶c
+-- -- general inductive step
+⟶ʳ-confluent {A = a} {B = b} {C = c} (a⟶b′ ◅ b′⟶*b) (a⟶c′ ◅ c′⟶*c) = {!  !}
   -- let
   --   d , b′⟶*d , c′⟶*d = ⟶ʳ-confluent (a⟶b′ ◅ ⊘) (a⟶c′ ◅ ⊘)
   --   e , d⟶*e , b⟶*e = ⟶ʳ-confluent b′⟶*d b′⟶*b
@@ -267,8 +271,3 @@ _⟶ʳ*_ = Star _⟶ʳ_
   --   c⟶*g = c⟶*f ◅◅ f⟶*g
   -- in
   --   g , b⟶*g , c⟶*g
-
-
--- confluent-example₁ = 
---   let a = ⟶ʳ-confluent (⨾₁ (⊗₁ ε-ε) ◅ ⨾₂ ε-ε ◅ ⊘) (⨾₁ (⊗₂ ε-ε) ◅ ⨾₁ ((⊗₁ ε-ε)) ◅ ⊘)
---   in {!   !}
