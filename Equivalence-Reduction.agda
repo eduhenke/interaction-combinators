@@ -220,7 +220,6 @@ _⟶ʳ*_ = Star _⟶ʳ_
 ⨾₂* ⊘ = ⊘
 ⨾₂* (a⟶j ◅ j⟶*b) = ⨾₂ a⟶j ◅ ⨾₂* j⟶*b
 
-{-# TERMINATING #-} -- TODO: remove
 ⟶ʳ-confluent : ∀ {i o : ℕ} → Confluent (_⟶ʳ_ {i} {o})
 -- trivial empty cases
 ⟶ʳ-confluent {A = a} ⊘ ⊘ = a , ⊘ , ⊘
