@@ -23,10 +23,13 @@ open import Relation.Binary.Rewriting
 data Net : ℕ → ℕ → Set
 
 variable
-  i o : ℕ
-  i₁ i₂ i₃ o₁ o₂ o₃ : ℕ
-  k k₁ k₂ p q : ℕ
-  n n₁ n₂ n₃ : Net i o
+  i o m    : ℕ
+  i₁ i₂ i₃ : ℕ
+  o₁ o₂ o₃ : ℕ
+  m₁ m₂ m₃ : ℕ
+
+  n : Net i o
+  a b c k : Net i o
 
 infixl 8 _⨾_
 infixl 9 _⊗_
@@ -40,8 +43,8 @@ data Net where
     ------------
     → Net i o
   _⨾_ :
-      Net i k
-    → Net   k o
+      Net i m
+    → Net   m o
     → Net i   o
   -- generating operations
   ε⁺ : Net 0 1
@@ -54,54 +57,53 @@ data Net where
 id₀ = id {0}
 id₁ = id {1}
 
-⨁⁺ : Net 0 1 → Net 0 k
+⨁⁺ : Net 0 1 → Net 0 m
 ⨁⁺ {0} net = id₀
-⨁⁺ {suc k} net = net ⊗ (⨁⁺ {k} net)
+⨁⁺ {suc m} net = net ⊗ (⨁⁺ {m} net)
 
-⨁⁻ : Net 1 0 → Net k 0
+⨁⁻ : Net 1 0 → Net m 0
 ⨁⁻ {0} net = id₀
-⨁⁻ {suc k} net = net ⊗ (⨁⁻ {k} net)
+⨁⁻ {suc m} net = net ⊗ (⨁⁻ {m} net)
 
 infixl 1 _~′_ 
 -- Small-step syntactical equivalence on nets
 data _~′_ : Rel (Net i o) 0ℓ where
   ⨾-id : n ⨾ id ~′ n
   id-⨾ : id ⨾ n ~′ n
-  ⨾-assoc : ∀ {i o p q : ℕ} → {n₁ : Net i p} → {n₂ : Net p q} → {n₃ : Net q o}
-    → n₁ ⨾ n₂ ⨾ n₃ ~′ n₁ ⨾ (n₂ ⨾ n₃)
+  ⨾-assoc : (a ⨾ b) ⨾ c ~′ a ⨾ (b ⨾ c)
   ⊗-assoc :
       {{i≡ : i ≡ i₁ + i₂ + i₃}}
     → {{o≡ : o ≡ o₁ + o₂ + o₃}}
-    → {n₁ : Net i₁ o₁}
-    → {n₂ : Net i₂ o₂}
-    → {n₃ : Net i₃ o₃}
+    → {a : Net i₁ o₁}
+    → {b : Net i₂ o₂}
+    → {c : Net i₃ o₃}
     → (
       (_⊗_ {{i≡}} {{o≡}}
-        (n₁ ⊗ n₂) n₃)
+        (a ⊗ b) c)
       ~′
       (_⊗_ {{Eq.trans i≡ (+-assoc i₁ i₂ i₃)}} {{Eq.trans o≡ (+-assoc o₁ o₂ o₃)}}
-        n₁ (n₂ ⊗ n₃)))
+        a (b ⊗ c)))
   ⊗-empty : (_⊗_ {{Eq.sym (+-identityʳ i)}} {{Eq.sym (+-identityʳ o)}} n (id {0}) ~′ n)
   empty-⊗ : (_⊗_ {{Eq.sym (+-identityˡ i)}} {{Eq.sym (+-identityˡ o)}} (id {0}) n ~′ n)
 
   distr :
       {{i≡ : i ≡ i₁ + i₂}}
     → {{o≡ : o ≡ o₁ + o₂}}
-    → {{k≡ : k ≡ k₁ + k₂}}
-    → {a₁ : Net i₁ k₁}
-    → {a₂ : Net i₂ k₂}
-    → {b₁ : Net k₁ o₁}
-    → {b₂ : Net k₂ o₂}
-    → (_⊗_ {{i≡}} {{k≡}} a₁ a₂) ⨾ (_⊗_ {{k≡}} {{o≡}} b₁ b₂) ~′ (a₁ ⨾ b₁) ⊗ (a₂ ⨾ b₂)
+    → {{m≡ : m ≡ m₁ + m₂}}
+    → {a₁ : Net i₁ m₁}
+    → {a₂ : Net i₂ m₂}
+    → {b₁ : Net m₁ o₁}
+    → {b₂ : Net m₂ o₂}
+    → (_⊗_ {{i≡}} {{m≡}} a₁ a₂) ⨾ (_⊗_ {{m≡}} {{o≡}} b₁ b₂) ~′ (a₁ ⨾ b₁) ⊗ (a₂ ⨾ b₂)
 
   τ-τ : τ ⨾ τ ~′ id
   ⨾-τ : ∀ {n : Net 1 1} → (id₁ ⊗ n) ⨾ τ ~′ τ ⨾ (n ⊗ id₁)
 
   -- structural transitivity
-  ⊗₁ : n₁ ~′ n₂ → n₁ ⊗ n ~′ n₂ ⊗ n
-  ⊗₂ : n₁ ~′ n₂ → n ⊗ n₁ ~′ n ⊗ n₂
-  ⨾₁ : n₁ ~′ n₂ → n₁ ⨾ n ~′ n₂ ⨾ n
-  ⨾₂ : n₁ ~′ n₂ → n ⨾ n₁ ~′ n ⨾ n₂
+  ⊗₁ : a ~′ b → a ⊗ k ~′ b ⊗ k
+  ⊗₂ : a ~′ b → k ⊗ a ~′ k ⊗ b
+  ⨾₁ : a ~′ b → a ⨾ k ~′ b ⨾ k
+  ⨾₂ : a ~′ b → k ⨾ a ~′ k ⨾ b
 
 -- Syntactical equivalence
 _~_ : Rel (Net i o) 0ℓ
@@ -120,15 +122,15 @@ data _⟶ʳ_ : Rel (Net i o) 0ℓ where
   δ-ζ : δ⁺ ⨾ ζ⁻ ⟶ʳ ζ⁻ ⊗ ζ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ δ⁺ ⊗ δ⁺
   ζ-δ : ζ⁺ ⨾ δ⁻ ⟶ʳ δ⁻ ⊗ δ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ ζ⁺ ⊗ ζ⁺
   -- structural transitivity
-  ⊗₁ : n₁ ⟶ʳ n₂ → n₁ ⊗ n ⟶ʳ n₂ ⊗ n
-  ⊗₂ : n₁ ⟶ʳ n₂ → n ⊗ n₁ ⟶ʳ n ⊗ n₂
-  ⨾₁ : n₁ ⟶ʳ n₂ → n₁ ⨾ n ⟶ʳ n₂ ⨾ n
-  ⨾₂ : n₁ ⟶ʳ n₂ → n ⨾ n₁ ⟶ʳ n ⨾ n₂
+  ⊗₁ : a ⟶ʳ b → a ⊗ k ⟶ʳ b ⊗ k
+  ⊗₂ : a ⟶ʳ b → k ⊗ a ⟶ʳ k ⊗ b
+  ⨾₁ : a ⟶ʳ b → a ⨾ k ⟶ʳ b ⨾ k
+  ⨾₂ : a ⟶ʳ b → k ⨾ a ⟶ʳ k ⨾ b
 
 
 infix  2 _⟶_
 _⟶_ : Rel (Net i o) 0ℓ
-n₁ ⟶ n₂ = ∃ λ k → n₁ ~ k × k ⟶ʳ n₂
+a ⟶ b = ∃ λ k → a ~ k × k ⟶ʳ b
 
 
 infix  2 _⟶*_
@@ -191,34 +193,27 @@ module ⟶-examples where
     τ ⊗ (δ⁺ ⨾ δ⁻)          ⟶ʳ⟨ ⊗₂ δ-δ ⟩
     (τ ⊗ τ)                   ∎
 
+infix  2 _⟶ʳ*_
 _⟶ʳ*_ : Rel (Net i o) 0ℓ
 _⟶ʳ*_ = Star _⟶ʳ_
 
-⊗₁* : ∀ {i o i′ o′ : ℕ} {a b : Net i o} {k : Net i′ o′}
-  → a ⟶ʳ* b
-  → (a ⊗ k) ⟶ʳ* (b ⊗ k)
+⊗₁* : a ⟶ʳ* b → a ⊗ k ⟶ʳ* b ⊗ k
 ⊗₁* ⊘ = ⊘
 ⊗₁* (a⟶j ◅ j⟶*b) = ⊗₁ a⟶j ◅ ⊗₁* j⟶*b
 
-⊗₂* : ∀ {i o i′ o′ : ℕ} {a b : Net i o} {k : Net i′ o′}
-  → a ⟶ʳ* b
-  → (k ⊗ a) ⟶ʳ* (k ⊗ b)
+⊗₂* : a ⟶ʳ* b → k ⊗ a ⟶ʳ* k ⊗ b
 ⊗₂* ⊘ = ⊘
 ⊗₂* (a⟶j ◅ j⟶*b) = ⊗₂ a⟶j ◅ ⊗₂* j⟶*b
 
-⨾₁* : ∀ {i m o : ℕ} {a b : Net i m} {k : Net m o}
-  → a ⟶ʳ* b
-  → (a ⨾ k) ⟶ʳ* (b ⨾ k)
+⨾₁* : a ⟶ʳ* b → a ⨾ k ⟶ʳ* b ⨾ k
 ⨾₁* ⊘ = ⊘
 ⨾₁* (a⟶j ◅ j⟶*b) = ⨾₁ a⟶j ◅ ⨾₁* j⟶*b
 
-⨾₂* : ∀ {i m o : ℕ} {a b : Net m o} {k : Net i m}
-  → a ⟶ʳ* b
-  → (k ⨾ a) ⟶ʳ* (k ⨾ b)
+⨾₂* : a ⟶ʳ* b → k ⨾ a ⟶ʳ* k ⨾ b
 ⨾₂* ⊘ = ⊘
 ⨾₂* (a⟶j ◅ j⟶*b) = ⨾₂ a⟶j ◅ ⨾₂* j⟶*b
 
-⟶ʳ-weakly-confluent : ∀ {i o : ℕ} → WeaklyConfluent (_⟶ʳ_ {i} {o})
+⟶ʳ-weakly-confluent : WeaklyConfluent (_⟶ʳ_ {i} {o})
 -- atomic cases
 ⟶ʳ-weakly-confluent ε-δ ε-δ = _ , ⊘ , ⊘
 ⟶ʳ-weakly-confluent ε-ζ ε-ζ = _ , ⊘ , ⊘
@@ -230,24 +225,24 @@ _⟶ʳ*_ = Star _⟶ʳ_
 ⟶ʳ-weakly-confluent δ-ζ δ-ζ = _ , ⊘ , ⊘
 ⟶ʳ-weakly-confluent ζ-δ ζ-δ = _ , ⊘ , ⊘
 -- structural transitivity cases
-⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⊗₁ a⟶b) (⊗₁ a⟶c) =
+⟶ʳ-weakly-confluent (⊗₁ a⟶b) (⊗₁ a⟶c) =
   let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
   in (d ⊗ _) , ⊗₁* b⟶d , ⊗₁* c⟶d
-⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⊗₁ a⟶b) (⊗₂ a⟶c) =
+⟶ʳ-weakly-confluent (⊗₁ a⟶b) (⊗₂ a⟶c) =
   _ , ⊗₂ a⟶c ◅ ⊘ , ⊗₁ a⟶b ◅ ⊘
-⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⊗₂ a⟶b) (⊗₁ a⟶c) =
+⟶ʳ-weakly-confluent (⊗₂ a⟶b) (⊗₁ a⟶c) =
   _ , ⊗₁ a⟶c ◅ ⊘ , ⊗₂ a⟶b ◅ ⊘
-⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⊗₂ a⟶b) (⊗₂ a⟶c) =
+⟶ʳ-weakly-confluent (⊗₂ a⟶b) (⊗₂ a⟶c) =
   let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
   in (_ ⊗ d) , ⊗₂* b⟶d , ⊗₂* c⟶d
-⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⨾₁ a⟶b) (⨾₁ a⟶c) =
+⟶ʳ-weakly-confluent (⨾₁ a⟶b) (⨾₁ a⟶c) =
   let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
   in (d ⨾ _) , ⨾₁* b⟶d , ⨾₁* c⟶d
-⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⨾₁ a⟶b) (⨾₂ a⟶c) =
+⟶ʳ-weakly-confluent (⨾₁ a⟶b) (⨾₂ a⟶c) =
   _ , ⨾₂ a⟶c ◅ ⊘ , ⨾₁ a⟶b ◅ ⊘
-⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⨾₂ a⟶b) (⨾₁ a⟶c) =
+⟶ʳ-weakly-confluent (⨾₂ a⟶b) (⨾₁ a⟶c) =
   _ , ⨾₁ a⟶c ◅ ⊘ , ⨾₂ a⟶b ◅ ⊘
-⟶ʳ-weakly-confluent {A = a} {B = b} {C = c} (⨾₂ a⟶b) (⨾₂ a⟶c) =
+⟶ʳ-weakly-confluent (⨾₂ a⟶b) (⨾₂ a⟶c) =
   let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
   in (_ ⨾ d) , ⨾₂* b⟶d , ⨾₂* c⟶d
 
@@ -298,19 +293,19 @@ module _ where
     _<⁺_ : Rel (Net i o) 0ℓ
     _<⁺_ = Plus _<_
 
-    ⊗-acc : ∀ {i₁ o₁ i₂ o₂} {n₁ : Net i₁ o₁} {n₂ : Net i₂ o₂}
-      → Acc _<_ n₁
-      → Acc _<_ n₂
-      → Acc _<_ (n₁ ⊗ n₂)
+    ⊗-acc :
+        Acc _<_ a
+      → Acc _<_ b
+      → Acc _<_ (a ⊗ b)
     ⊗-acc (acc rs₁) (acc rs₂) =
       acc (λ{(⊗₁ y<n) → ⊗-acc (rs₁ y<n) (acc rs₂)
             ;(⊗₂ y<n) → ⊗-acc (acc rs₁) (rs₂ y<n)})
     
     mutual
-      ⨾-acc : ∀ {i k o} {n₁ : Net i k} {n₂ : Net k o}
-        → Acc _<_ n₁
-        → Acc _<_ n₂
-        → Acc _<_ (n₁ ⨾ n₂)
+      ⨾-acc :
+          Acc _<_ a
+        → Acc _<_ b
+        → Acc _<_ (a ⨾ b)
       ⨾-acc (acc rs₁) (acc rs₂) =
         acc λ{ε-δ → <-acc (ε⁺ ⨾ δ⁻) ε-δ
             ; ε-ζ → <-acc (ε⁺ ⨾ ζ⁻) ε-ζ
@@ -334,10 +329,10 @@ module _ where
       <-acc .(ζ⁺ ⨾ ζ⁻) {.τ} ζ-ζ = acc (λ x → ⊥-elim (τ-nfʳ (_ , x)))
       <-acc .(δ⁺ ⨾ ζ⁻) {.(ζ⁻ ⊗ ζ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ δ⁺ ⊗ δ⁺)} δ-ζ = acc (λ x → ⊥-elim (ζζτδδ-nfʳ (_ , x)))
       <-acc .(ζ⁺ ⨾ δ⁻) {.(δ⁻ ⊗ δ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ ζ⁺ ⊗ ζ⁺)} ζ-δ = acc (λ x → ⊥-elim (δδτζζ-nfʳ (_ , x)))
-      <-acc (n₁ ⊗ n₂) {.(y₁ ⊗ n₂)} (⊗₁ {n₂ = y₁} y₁<n₁) = ⊗-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
-      <-acc (n₁ ⊗ n₂) {.(n₁ ⊗ y₂)} (⊗₂ {n₂ = y₂} y₂<n₂) = ⊗-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
-      <-acc (n₁ ⨾ n₂) {.(y₁ ⨾ n₂)} (⨾₁ {n₂ = y₁} y₁<n₁) = ⨾-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
-      <-acc (n₁ ⨾ n₂) {.(n₁ ⨾ y₂)} (⨾₂ {n₂ = y₂} y₂<n₂) = ⨾-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
+      <-acc (n₁ ⊗ n₂) {.(y₁ ⊗ n₂)} (⊗₁ {b = y₁} y₁<n₁) = ⊗-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
+      <-acc (n₁ ⊗ n₂) {.(n₁ ⊗ y₂)} (⊗₂ {b = y₂} y₂<n₂) = ⊗-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
+      <-acc (n₁ ⨾ n₂) {.(y₁ ⨾ n₂)} (⨾₁ {b = y₁} y₁<n₁) = ⨾-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
+      <-acc (n₁ ⨾ n₂) {.(n₁ ⨾ y₂)} (⨾₂ {b = y₂} y₂<n₂) = ⨾-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
 
       <-wf : WellFounded (_<_ {i} {o})
       <-wf {i} {o} n = acc (<-acc {i} {o} n)
