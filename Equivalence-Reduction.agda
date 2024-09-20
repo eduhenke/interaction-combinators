@@ -4,11 +4,10 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_)
 
 open import Data.Fin.Base using (Fin)
-open import Data.List
 open import Relation.Binary using (IsEquivalence; Setoid)
-open import Data.Fin.Permutation using (Permutation; transpose; flip; _∘ₚ_) renaming (id to permutationId)
 open import Data.Fin.Patterns
 open import Function.Base hiding (id)
+open import Data.Empty
 
 open import Relation.Nullary using (¬_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
@@ -66,7 +65,6 @@ id₁ = id {1}
 infixl 1 _~′_ 
 -- Small-step syntactical equivalence on nets
 data _~′_ : Rel (Net i o) 0ℓ where
-  symm : n₁ ~′ n₂ → n₂ ~′ n₁
   ⨾-id : n ⨾ id ~′ n
   id-⨾ : id ⨾ n ~′ n
   ⨾-assoc : ∀ {i o p q : ℕ} → {n₁ : Net i p} → {n₂ : Net p q} → {n₃ : Net q o}
@@ -253,21 +251,117 @@ _⟶ʳ*_ = Star _⟶ʳ_
   let d , b⟶d , c⟶d = ⟶ʳ-weakly-confluent a⟶b a⟶c
   in (_ ⨾ d) , ⨾₂* b⟶d , ⨾₂* c⟶d
 
-⟶ʳ-confluent : ∀ {i o : ℕ} → Confluent (_⟶ʳ_ {i} {o})
--- trivial empty cases
-⟶ʳ-confluent {A = a} ⊘ ⊘ = a , ⊘ , ⊘
-⟶ʳ-confluent {C = c} ⊘ a⟶*c = c , (a⟶*c , ⊘)
-⟶ʳ-confluent {B = b} a⟶*b ⊘ = b , (⊘ , a⟶*b)
--- atomic cases
-⟶ʳ-confluent (a⟶b ◅ ⊘) (a⟶c ◅ ⊘) = ⟶ʳ-weakly-confluent a⟶b a⟶c
--- -- general inductive step
-⟶ʳ-confluent {A = a} {B = b} {C = c} (a⟶b′ ◅ b′⟶*b) (a⟶c′ ◅ c′⟶*c) = {!  !}
-  -- let
-  --   d , b′⟶*d , c′⟶*d = ⟶ʳ-confluent (a⟶b′ ◅ ⊘) (a⟶c′ ◅ ⊘)
-  --   e , d⟶*e , b⟶*e = ⟶ʳ-confluent b′⟶*d b′⟶*b
-  --   f , d⟶*f , c⟶*f = ⟶ʳ-confluent c′⟶*d c′⟶*c
-  --   g , e⟶*g , f⟶*g = ⟶ʳ-confluent d⟶*e d⟶*f
-  --   b⟶*g = b⟶*e ◅◅ e⟶*g
-  --   c⟶*g = c⟶*f ◅◅ f⟶*g
-  -- in
-  --   g , b⟶*g , c⟶*g
+
+ε⊗ε⁺-nfʳ : IsNormalForm (_⟶ʳ_) (ε⁺ ⊗ ε⁺)
+ε⊗ε⁺-nfʳ (_ , ⊗₁ ())
+ε⊗ε⁺-nfʳ (_ , ⊗₂ ())
+
+ε⊗ε⁻-nfʳ : IsNormalForm (_⟶ʳ_) (ε⁻ ⊗ ε⁻)
+ε⊗ε⁻-nfʳ (_ , ⊗₁ ())
+ε⊗ε⁻-nfʳ (_ , ⊗₂ ())
+
+id-nfʳ : ∀ {i : ℕ} → IsNormalForm (_⟶ʳ_) (id {i})
+id-nfʳ ()
+
+τ-nfʳ : IsNormalForm (_⟶ʳ_) τ
+τ-nfʳ ()
+
+ζζτδδ-nfʳ : IsNormalForm (_⟶ʳ_) (ζ⁻ ⊗ ζ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ δ⁺ ⊗ δ⁺)
+ζζτδδ-nfʳ (_ , ⨾₁ (⨾₁ (⊗₁ ())))
+ζζτδδ-nfʳ (_ , ⨾₁ (⨾₁ (⊗₂ ())))
+ζζτδδ-nfʳ (_ , ⨾₁ (⨾₂ (⊗₁ (⊗₁ ()))))
+ζζτδδ-nfʳ (_ , ⨾₁ (⨾₂ (⊗₁ (⊗₂ ()))))
+ζζτδδ-nfʳ (_ , ⨾₂ (⊗₁ ()))
+ζζτδδ-nfʳ (_ , ⨾₂ (⊗₂ ()))
+
+δδτζζ-nfʳ : IsNormalForm (_⟶ʳ_) (δ⁻ ⊗ δ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ ζ⁺ ⊗ ζ⁺)
+δδτζζ-nfʳ (_ , ⨾₁ (⨾₁ (⊗₁ ())))
+δδτζζ-nfʳ (_ , ⨾₁ (⨾₁ (⊗₂ ())))
+δδτζζ-nfʳ (_ , ⨾₁ (⨾₂ (⊗₁ (⊗₁ ()))))
+δδτζζ-nfʳ (_ , ⨾₁ (⨾₂ (⊗₁ (⊗₂ ()))))
+δδτζζ-nfʳ (_ , ⨾₂ (⊗₁ ()))
+δδτζζ-nfʳ (_ , ⨾₂ (⊗₂ ()))
+
+module _ where
+  open import Induction.WellFounded
+  import Relation.Binary.Construct.Closure.Transitive as Transitive
+  open import Function.Bundles using (Equivalence)
+  open Transitive hiding (wellFounded)
+
+  private
+    _<_ : Rel (Net i o) 0ℓ
+    a < b = b ⟶ʳ a
+
+    _⟶ʳ⁺_ : Rel (Net i o) 0ℓ
+    _⟶ʳ⁺_ = Plus _⟶ʳ_
+
+    _<⁺_ : Rel (Net i o) 0ℓ
+    _<⁺_ = Plus _<_
+
+    ⊗-acc : ∀ {i₁ o₁ i₂ o₂} {n₁ : Net i₁ o₁} {n₂ : Net i₂ o₂}
+      → Acc _<_ n₁
+      → Acc _<_ n₂
+      → Acc _<_ (n₁ ⊗ n₂)
+    ⊗-acc (acc rs₁) (acc rs₂) =
+      acc (λ{(⊗₁ y<n) → ⊗-acc (rs₁ y<n) (acc rs₂)
+            ;(⊗₂ y<n) → ⊗-acc (acc rs₁) (rs₂ y<n)})
+    
+    mutual
+      ⨾-acc : ∀ {i k o} {n₁ : Net i k} {n₂ : Net k o}
+        → Acc _<_ n₁
+        → Acc _<_ n₂
+        → Acc _<_ (n₁ ⨾ n₂)
+      ⨾-acc (acc rs₁) (acc rs₂) =
+        acc λ{ε-δ → <-acc (ε⁺ ⨾ δ⁻) ε-δ
+            ; ε-ζ → <-acc (ε⁺ ⨾ ζ⁻) ε-ζ
+            ; ε-ε → <-acc (ε⁺ ⨾ ε⁻) ε-ε
+            ; δ-ε → <-acc (δ⁺ ⨾ ε⁻) δ-ε
+            ; ζ-ε → <-acc (ζ⁺ ⨾ ε⁻) ζ-ε
+            ; δ-δ → <-acc (δ⁺ ⨾ δ⁻) δ-δ
+            ; ζ-ζ → <-acc (ζ⁺ ⨾ ζ⁻) ζ-ζ
+            ; δ-ζ → <-acc (δ⁺ ⨾ ζ⁻) δ-ζ
+            ; ζ-δ → <-acc (ζ⁺ ⨾ δ⁻) ζ-δ
+            ; (⨾₁ y<n) → ⨾-acc (rs₁ y<n) (acc rs₂)
+            ; (⨾₂ y<n) → ⨾-acc (acc rs₁) (rs₂ y<n)}
+
+      <-acc : ∀ {i o : ℕ} n {y} → y < n → Acc _<_ y
+      <-acc .(ε⁺ ⨾ δ⁻) {.(ε⁺ ⊗ ε⁺)} ε-δ = acc (λ x → ⊥-elim (ε⊗ε⁺-nfʳ (_ , x)))
+      <-acc .(ε⁺ ⨾ ζ⁻) {.(ε⁺ ⊗ ε⁺)} ε-ζ = acc (λ x → ⊥-elim (ε⊗ε⁺-nfʳ (_ , x)))
+      <-acc .(ε⁺ ⨾ ε⁻) {.id₀} ε-ε = acc (λ x → ⊥-elim (id-nfʳ (_ , x)))
+      <-acc .(δ⁺ ⨾ ε⁻) {.(ε⁻ ⊗ ε⁻)} δ-ε = acc (λ x → ⊥-elim (ε⊗ε⁻-nfʳ (_ , x)))
+      <-acc .(ζ⁺ ⨾ ε⁻) {.(ε⁻ ⊗ ε⁻)} ζ-ε = acc (λ x → ⊥-elim (ε⊗ε⁻-nfʳ (_ , x)))
+      <-acc .(δ⁺ ⨾ δ⁻) {.τ} δ-δ = acc (λ x → ⊥-elim (τ-nfʳ (_ , x)))
+      <-acc .(ζ⁺ ⨾ ζ⁻) {.τ} ζ-ζ = acc (λ x → ⊥-elim (τ-nfʳ (_ , x)))
+      <-acc .(δ⁺ ⨾ ζ⁻) {.(ζ⁻ ⊗ ζ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ δ⁺ ⊗ δ⁺)} δ-ζ = acc (λ x → ⊥-elim (ζζτδδ-nfʳ (_ , x)))
+      <-acc .(ζ⁺ ⨾ δ⁻) {.(δ⁻ ⊗ δ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ ζ⁺ ⊗ ζ⁺)} ζ-δ = acc (λ x → ⊥-elim (δδτζζ-nfʳ (_ , x)))
+      <-acc (n₁ ⊗ n₂) {.(y₁ ⊗ n₂)} (⊗₁ {n₂ = y₁} y₁<n₁) = ⊗-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
+      <-acc (n₁ ⊗ n₂) {.(n₁ ⊗ y₂)} (⊗₂ {n₂ = y₂} y₂<n₂) = ⊗-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
+      <-acc (n₁ ⨾ n₂) {.(y₁ ⨾ n₂)} (⨾₁ {n₂ = y₁} y₁<n₁) = ⨾-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
+      <-acc (n₁ ⨾ n₂) {.(n₁ ⨾ y₂)} (⨾₂ {n₂ = y₂} y₂<n₂) = ⨾-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
+
+      <-wf : WellFounded (_<_ {i} {o})
+      <-wf {i} {o} n = acc (<-acc {i} {o} n)
+  
+  <*-wf : WellFounded (TransClosure (_<_ {i} {o}))
+  <*-wf {i} {o} = Transitive.wellFounded (_<_ {i} {o}) <-wf
+
+  <⁺-wf : WellFounded (_<⁺_ {i} {o})
+  <⁺-wf {i} {o} = Subrelation.wellFounded (λ {x} {y} rel → plus→trans rel) (<*-wf {i} {o})
+    where
+    plus→trans : ∀ {x y} → (Plus _<_ x y) → (TransClosure _<_ x y)
+    plus→trans = Equivalence.to (Transitive.equivalent {0ℓ} {Net i o} {0ℓ} {_<_ {i} {o}})
+  
+  ⟶ʳ-normalizing : StronglyNormalizing (_⟶ʳ_ {i} {o})
+  ⟶ʳ-normalizing = <-wf
+
+  private
+    module _ {a ℓ : Level} {A : Set a} {_⟶_ : Rel A ℓ} where
+      fromFlip : ∀ {x y : A} → flip (Plus _⟶_) x y → Plus (flip _⟶_) x y
+      fromFlip [ y⟶x ]                 = [ y⟶x ]
+      fromFlip (y⟶+z ∼⁺⟨ x∼⁺y ⟩ z⟶x) = _ ∼⁺⟨ fromFlip z⟶x ⟩ fromFlip x∼⁺y
+
+  ⟶ʳ⁺-normalizing : StronglyNormalizing (_⟶ʳ⁺_ {i} {o})
+  ⟶ʳ⁺-normalizing = Subrelation.wellFounded fromFlip <⁺-wf
+ 
+⟶ʳ-confluent : Confluent (_⟶ʳ_ {i} {o})
+⟶ʳ-confluent {i} {o} = sn&wcr⇒cr (⟶ʳ⁺-normalizing {i} {o}) ⟶ʳ-weakly-confluent
