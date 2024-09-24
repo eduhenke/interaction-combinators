@@ -6,11 +6,12 @@ import Relation.Binary.Construct.Closure.ReflexiveTransitive as Star
 import Relation.Binary.Construct.Closure.Symmetric as Sym
 import Relation.Binary.Construct.Closure.Equivalence as Eq
 open import Data.Nat using (ℕ; _+_)
+open import Data.Nat.Properties using (+-assoc; +-identityˡ; +-identityʳ)
 open import Relation.Binary using (Rel)
 open import Relation.Nullary.Negation using (¬_)
 open import Data.Empty
 open import Function.Base using (flip; _∘_)
-open import Relation.Binary.PropositionalEquality using (_≡_; subst)
+open import Relation.Binary.PropositionalEquality using (_≡_; subst; sym; trans)
 
 open import Definitions
 open import Relations
@@ -315,6 +316,15 @@ rel-weakly-confluent a⟶b a⟶c with a⟶b | a⟶c
       a⟶b = ε⁺ ⨾ ε⁻ , fwd (⨾₁ ⨾-id) ◅ ⊘ , ε-ε
   in a , b , nfʳ , a⟶b
 
+subst-net : ∀ {i′ o′} → i ≡ i′ → o ≡ o′ → Net i o → Net i′ o′
+subst-net i≡ o≡ = subst (λ x → Net _ x) o≡ ∘ subst (λ x → Net x _) i≡
+
+↓⁰ : Net (i + 0) (o + 0) → Net i o
+↓⁰ = subst-net (+-identityʳ _) (+-identityʳ _)
+
+↑⁰ : Net i o → Net (i + 0) (o + 0)
+↑⁰ = subst-net (sym (+-identityʳ _)) (sym (+-identityʳ _))
+
 module ~′-Properties where
   ⊗₁* : a ~ b → a ⊗ k ~ b ⊗ k
   ⊗₁* {k = k} = Eq.gmap (_⊗ k) ⊗₁
@@ -327,6 +337,91 @@ module ~′-Properties where
 
   ⨾₂* : a ~ b → k ⨾ a ~ k ⨾ b
   ⨾₂* {k = k} = Eq.gmap (k ⨾_) ⨾₂
+
+  open import Relation.Nullary using (Dec; yes; no)
+  open import Relation.Nullary.Decidable using
+    (⌊_⌋; True; toWitness; fromWitness; _×-dec_; _⊎-dec_)
+  open import Relation.Binary.Definitions using (Decidable)
+
+  ~′-decidable : Decidable (Star (_~′_ {i} {o}))
+  ~′-decidable id id = yes ⊘
+  ~′-decidable id τ = no λ{(() ◅ _)}
+  ~′-decidable id (b ⊗ b₁) = no λ{(() ◅ _)}
+  ~′-decidable id (b ⨾ b₁) = no λ{(() ◅ _)}
+  ~′-decidable τ id = no λ{(() ◅ _)}
+  ~′-decidable τ τ = yes ⊘
+  ~′-decidable τ (b ⊗ b₁) = no λ{(() ◅ _)}
+  ~′-decidable τ (b ⨾ b₁) = no λ{(() ◅ _)}
+  ~′-decidable ε⁺ (b₁ ⊗ b₂) = no λ{(() ◅ _)}
+  ~′-decidable ε⁺ (b₁ ⨾ b₂) = no λ{(() ◅ _)}
+  ~′-decidable ε⁺ ε⁺ = yes ⊘
+  ~′-decidable ε⁻ (b₁ ⊗ b₂) = no λ{(() ◅ _)}
+  ~′-decidable ε⁻ (b₁ ⨾ b₂) = no λ{(() ◅ _)}
+  ~′-decidable ε⁻ ε⁻ = yes ⊘
+  ~′-decidable δ⁺ (b₁ ⊗ b₂) = no λ{(() ◅ _)}
+  ~′-decidable δ⁺ (b₁ ⨾ b₂) = no λ{(() ◅ _)}
+  ~′-decidable δ⁺ δ⁺ = yes ⊘
+  ~′-decidable δ⁺ ζ⁺ = no λ{(() ◅ _)}
+  ~′-decidable δ⁻ (b₁ ⊗ b₂) = no λ{(() ◅ _)}
+  ~′-decidable δ⁻ (b₁ ⨾ b₂) = no λ{(() ◅ _)}
+  ~′-decidable δ⁻ δ⁻ = yes ⊘
+  ~′-decidable δ⁻ ζ⁻ = no λ{(() ◅ _)}
+  ~′-decidable ζ⁺ (b₁ ⊗ b₂) = no λ{(() ◅ _)}
+  ~′-decidable ζ⁺ (b₁ ⨾ b₂) = no λ{(() ◅ _)}
+  ~′-decidable ζ⁺ δ⁺ = no λ{(() ◅ _)}
+  ~′-decidable ζ⁺ ζ⁺ = yes ⊘
+  ~′-decidable ζ⁻ (b₁ ⊗ b₂) = no λ{(() ◅ _)}
+  ~′-decidable ζ⁻ (b₁ ⨾ b₂) = no λ{(() ◅ _)}
+  ~′-decidable ζ⁻ δ⁻ = no λ{(() ◅ _)}
+  ~′-decidable ζ⁻ ζ⁻ = yes ⊘
+
+  ~′-decidable (_⊗_ {{_≡_.refl}} {{_≡_.refl}} a₁ (id {0})) b with ~′-decidable a₁ (↓⁰ b)
+  ... | yes a₁~b = yes ({!  ⊗-empty !} ◅ {! a₁~b !})
+  ... | no ¬a₁~b = {!   !}
+
+  ~′-decidable (_⊗_ {{_≡_.refl}} {{_≡_.refl}} (id {0}) a₂) b with ~′-decidable a₂ b
+  ... | yes a₂~b = yes (empty-⊗ ◅ a₂~b)
+  ... | no ¬a₂~b = no (λ{id⊗a₂~b → {!   !}})
+  
+  ~′-decidable (a₁ ⊗ a₂) b = {!  !}
+  ~′-decidable (a₁ ⨾ a₂) b = {!   !}
+
+  -- ~-decidable : Decidable (Sym.SymClosure (_~′_ {i} {o}))
+  -- ~-decidable id id = yes (fwd refl)
+  -- ~-decidable id τ = no λ{(fwd ()) ; (bwd ())}
+  -- ~-decidable id (b ⊗ b₁) = no λ{(fwd ()) ; (bwd (⊗-empty {n = n})) → {!   !}
+  --                                         ; (bwd empty-⊗) → {!   !}}
+  -- ~-decidable id (b ⨾ b₁) = no λ{(fwd ()) ; (bwd ⨾-id) → {!   !}
+  --                                         ; (bwd id-⨾) → {!   !}
+  --                                         ; (bwd τ-τ) → {!   !}}
+  -- ~-decidable τ id = no λ{(fwd ()) ; (bwd ())}
+  -- ~-decidable τ τ = yes (fwd refl)
+  -- ~-decidable τ (b ⊗ b₁) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable τ (b ⨾ b₁) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ε⁺ (b₁ ⊗ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ε⁺ (b₁ ⨾ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ε⁺ ε⁺ = yes (fwd refl)
+  -- ~-decidable ε⁻ (b₁ ⊗ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ε⁻ (b₁ ⨾ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ε⁻ ε⁻ = yes (fwd refl)
+  -- ~-decidable δ⁺ (b₁ ⊗ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable δ⁺ (b₁ ⨾ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable δ⁺ δ⁺ = yes (fwd refl)
+  -- ~-decidable δ⁺ ζ⁺ = no λ{(fwd ()) ; (bwd ())}
+  -- ~-decidable δ⁻ (b₁ ⊗ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable δ⁻ (b₁ ⨾ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable δ⁻ δ⁻ = yes (fwd refl)
+  -- ~-decidable δ⁻ ζ⁻ = no λ{(fwd ()) ; (bwd ())}
+  -- ~-decidable ζ⁺ (b₁ ⊗ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ζ⁺ (b₁ ⨾ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ζ⁺ δ⁺ = no λ{(fwd ()) ; (bwd ())}
+  -- ~-decidable ζ⁺ ζ⁺ = yes (fwd refl)
+  -- ~-decidable ζ⁻ (b₁ ⊗ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ζ⁻ (b₁ ⨾ b₂) = no λ{(fwd ()) ; (bwd x) → {!   !}}
+  -- ~-decidable ζ⁻ δ⁻ = no λ{(fwd ()) ; (bwd ())}
+  -- ~-decidable ζ⁻ ζ⁻ = yes (fwd refl)
+  -- ~-decidable a b = {!   !}
+
 
   -- module WellFounded where
   --   open import Induction.WellFounded
@@ -444,5 +539,5 @@ module ⟶-Properties where
 
   --   ⟶-normalizing : StronglyNormalizing (_⟶_ {i} {o})
   --   ⟶-normalizing = ⟵-wf
-
- 
+  
+   
