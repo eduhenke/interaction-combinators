@@ -6,11 +6,12 @@ import Relation.Binary.Construct.Closure.ReflexiveTransitive as Star
 import Relation.Binary.Construct.Closure.Symmetric as Sym
 import Relation.Binary.Construct.Closure.Equivalence as Eq
 open import Data.Nat using (ℕ; _+_)
+open import Data.Nat.Properties using (+-assoc; +-identityˡ; +-identityʳ)
 open import Relation.Binary using (Rel)
 open import Relation.Nullary.Negation using (¬_)
 open import Data.Empty
 open import Function.Base using (flip; _∘_)
-open import Relation.Binary.PropositionalEquality using (_≡_; subst)
+open import Relation.Binary.PropositionalEquality using (_≡_; subst; sym; trans)
 
 open import Definitions
 open import Relations
@@ -314,6 +315,15 @@ rel-weakly-confluent a⟶b a⟶c with a⟶b | a⟶c
       nfʳ = λ()
       a⟶b = ε⁺ ⨾ ε⁻ , fwd (⨾₁ ⨾-id) ◅ ⊘ , ε-ε
   in a , b , nfʳ , a⟶b
+
+subst-net : ∀ {i′ o′} → i ≡ i′ → o ≡ o′ → Net i o → Net i′ o′
+subst-net i≡ o≡ = subst (λ x → Net _ x) o≡ ∘ subst (λ x → Net x _) i≡
+
+↓⁰ : Net (i + 0) (o + 0) → Net i o
+↓⁰ = subst-net (+-identityʳ _) (+-identityʳ _)
+
+↑⁰ : Net i o → Net (i + 0) (o + 0)
+↑⁰ = subst-net (sym (+-identityʳ _)) (sym (+-identityʳ _))
 
 module ~′-Properties where
   ⊗₁* : a ~ b → a ⊗ k ~ b ⊗ k
