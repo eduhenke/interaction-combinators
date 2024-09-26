@@ -1,6 +1,7 @@
+{-# OPTIONS --overlapping-instances #-}
 open import Data.Nat using (ℕ; _+_)
 open import Data.Nat.Properties using (+-assoc; +-identityˡ; +-identityʳ)
-open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Binary.PropositionalEquality using (_≡_; sym; trans)
 
 data Net : ℕ → ℕ → Set
 
@@ -13,13 +14,21 @@ variable
   n : Net i o
   a b c k : Net i o
 
+instance
+  i≡i+0 : i ≡ i + 0
+  i≡i+0 = sym (+-identityʳ _)
+
+  -- i≡+₃ : {i ≡ i₁ + i₂ + i₃} → i ≡ i₁ + (i₂ + i₃)
+  -- i≡+₃ {i} {i₁} {i₂} {i₃} {i≡} = trans i≡ (+-assoc i₁ i₂ i₃)
+
+
 infixl 8 _⨾_
 infixl 9 _⊗_
 data Net where
   -- underlying category theory constructs
   id : Net i i
   τ : Net 2 2
-  _⊗_ : {{i ≡ i₁ + i₂}} → {{o ≡ o₁ + o₂}}
+  _⊗_ : ∀ {i o i₁ i₂ o₁ o₂ : ℕ} → {{i ≡ i₁ + i₂}} → {{o ≡ o₁ + o₂}}
     → Net i₁ o₁
     → Net i₂ o₂
     ------------
@@ -36,5 +45,13 @@ data Net where
   ζ⁺ : Net 2 1
   ζ⁻ : Net 1 2
 
-id₀ = id {0}
-id₁ = id {1}
+
+pattern id₀ = id {0}
+pattern id₁ = id {1}
+
+-- In case you need to display/inspect id's
+-- pattern id[_] n = id {n}
+-- {-# DISPLAY id {x} = id[_] x #-}
+
+{-# DISPLAY id {0} = id₀ #-}
+{-# DISPLAY id {1} = id₁ #-}

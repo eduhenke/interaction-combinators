@@ -1,3 +1,4 @@
+{-# OPTIONS --overlapping-instances #-}
 open import Level
 open import Data.Nat using (ℕ; _+_)
 open import Data.Nat.Properties using (+-assoc; +-identityˡ; +-identityʳ)
@@ -31,27 +32,26 @@ infix  2 _⟶ʳ*_
 _⟶ʳ*_ : Rel (Net i o) 0ℓ
 _⟶ʳ*_ = Star _⟶ʳ_
 
++-assoc₃ : ∀ (i₁ : ℕ) → i ≡ i₁ + i₂ + i₃ → i ≡ i₁ + (i₂ + i₃)
++-assoc₃ i₁ i≡ = trans i≡ (+-assoc i₁ _ _)
+
 infixl 1 _~′_ 
 -- Small-step syntactical equivalence on nets
 data _~′_ : Rel (Net i o) 0ℓ where
   ⨾-id : n ⨾ id ~′ n
   id-⨾ : id ⨾ n ~′ n
-  ⨾-assoc : (a ⨾ b) ⨾ c ~′ a ⨾ (b ⨾ c)
+  ⨾-assoc : a ⨾ b ⨾ c ~′ a ⨾ (b ⨾ c)
+  
   ⊗-assoc :
       {{i≡ : i ≡ i₁ + i₂ + i₃}}
     → {{o≡ : o ≡ o₁ + o₂ + o₃}}
     → {a : Net i₁ o₁}
     → {b : Net i₂ o₂}
     → {c : Net i₃ o₃}
-    → (
-      (_⊗_ {{i≡}} {{o≡}}
-        (a ⊗ b) c)
-      ~′
-      (_⊗_ {{trans i≡ (+-assoc i₁ i₂ i₃)}} {{trans o≡ (+-assoc o₁ o₂ o₃)}}
-        a (b ⊗ c)))
-  -- ⊗-empty : {{i≡ : i ≡ i + 0}} → {{o≡ : o ≡ o + 0}} → (_⊗_ {{i≡}} {{o≡}} n (id {0}) ~′ n)
-  ⊗-empty : (_⊗_ {{sym (+-identityʳ i)}} {{sym (+-identityʳ o)}} n (id {0}) ~′ n)
-  empty-⊗ : (_⊗_ {{sym (+-identityˡ i)}} {{sym (+-identityˡ o)}} (id {0}) n ~′ n)
+    → a ⊗ b ⊗ c
+      ~′ _⊗_ {{+-assoc₃ i₁ i≡}} {{+-assoc₃ o₁ o≡}} a (b ⊗ c)
+  ⊗-empty : n ⊗ id₀ ~′ n
+  empty-⊗ : id₀ ⊗ n ~′ n
 
   distr :
       {{i≡ : i ≡ i₁ + i₂}}
@@ -65,6 +65,10 @@ data _~′_ : Rel (Net i o) 0ℓ where
 
   τ-τ : τ ⨾ τ ~′ id
   ⨾-τ : ∀ {n : Net 1 1} → (id₁ ⊗ n) ⨾ τ ~′ τ ⨾ (n ⊗ id₁)
+
+  -- we maybe can define this as a theorem
+  id⊗id : ∀ {a b : ℕ} → id {a} ⊗ id {b} ~′ id {a + b}
+
 
   -- structural transitivity
   ⊗₁ : a ~′ b → a ⊗ k ~′ b ⊗ k
