@@ -6,11 +6,12 @@ import Relation.Binary.Construct.Closure.ReflexiveTransitive as Star
 import Relation.Binary.Construct.Closure.Symmetric as Sym
 import Relation.Binary.Construct.Closure.Equivalence as Eq
 open import Data.Nat using (ℕ; _+_)
+open import Data.Nat.Properties using (_≟_)
 open import Relation.Binary using (Rel)
 open import Relation.Nullary.Negation using (¬_)
 open import Data.Empty
 open import Function.Base using (flip; _∘_)
-open import Relation.Binary.PropositionalEquality using (_≡_; subst)
+open import Relation.Binary.PropositionalEquality using (_≡_; subst; _≢_; cong; cong₂; sym; refl)
 
 open import Definitions
 open import Relations
@@ -198,8 +199,8 @@ module ⟶ʳ-Properties where
       <-acc .(ζ⁺ ⨾ ζ⁻) {.τ} ζ-ζ = acc (λ x → ⊥-elim (τ-nf (_ , x)))
       <-acc .(δ⁺ ⨾ ζ⁻) {.(ζ⁻ ⊗ ζ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ δ⁺ ⊗ δ⁺)} δ-ζ = acc (λ x → ⊥-elim (ζζτδδ-nf (_ , x)))
       <-acc .(ζ⁺ ⨾ δ⁻) {.(δ⁻ ⊗ δ⁻ ⨾ id₁ ⊗ τ ⊗ id₁ ⨾ ζ⁺ ⊗ ζ⁺)} ζ-δ = acc (λ x → ⊥-elim (δδτζζ-nf (_ , x)))
-      <-acc (n₁ ⊗ n₂) {.(y₁ ⊗ n₂)} (⊗₁ {b = y₁} y₁<n₁) = ⊗-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
-      <-acc (n₁ ⊗ n₂) {.(n₁ ⊗ y₂)} (⊗₂ {b = y₂} y₂<n₂) = ⊗-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
+      <-acc (n₁ ⊗ n₂) {_} (⊗₁ {b = y₁} y₁<n₁) = ⊗-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
+      <-acc (n₁ ⊗ n₂) {_} (⊗₂ {b = y₂} y₂<n₂) = ⊗-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
       <-acc (n₁ ⨾ n₂) {.(y₁ ⨾ n₂)} (⨾₁ {b = y₁} y₁<n₁) = ⨾-acc (<-acc n₁ y₁<n₁) (<-wf n₂)
       <-acc (n₁ ⨾ n₂) {.(n₁ ⨾ y₂)} (⨾₂ {b = y₂} y₂<n₂) = ⨾-acc (<-wf n₁) (<-acc n₂ y₂<n₂)
 
@@ -246,7 +247,7 @@ module ⟶ʳ-Properties where
   ⟶ʳ-progress δ⁻ = done δ⁻-nf
   ⟶ʳ-progress ζ⁺ = done ζ⁺-nf
   ⟶ʳ-progress ζ⁻ = done ζ⁻-nf
-  ⟶ʳ-progress (_⊗_ {{_≡_.refl}} {{_≡_.refl}} a b) with ⟶ʳ-progress a
+  ⟶ʳ-progress (_⊗_ {{refl}} {{refl}} a b) with ⟶ʳ-progress a
   ... | step {a′} a⟶a′ = step (⊗₁ a⟶a′)
   ... | done a-nf with ⟶ʳ-progress b
   ... | step b⟶b′ = step (⊗₂ b⟶b′)
@@ -315,7 +316,7 @@ rel-weakly-confluent a⟶b a⟶c with a⟶b | a⟶c
       a⟶b = ε⁺ ⨾ ε⁻ , fwd (⨾₁ ⨾-id) ◅ ⊘ , ε-ε
   in a , b , nfʳ , a⟶b
 
-module ~′-Properties where
+module ~-Properties where
   ⊗₁* : a ~ b → a ⊗ k ~ b ⊗ k
   ⊗₁* {k = k} = Eq.gmap (_⊗ k) ⊗₁
 
@@ -328,81 +329,73 @@ module ~′-Properties where
   ⨾₂* : a ~ b → k ⨾ a ~ k ⨾ b
   ⨾₂* {k = k} = Eq.gmap (k ⨾_) ⨾₂
 
-  -- module WellFounded where
-  --   open import Induction.WellFounded
+  open import Relation.Nullary using (Dec; yes; no)
 
-  --   private
-  --     _<_ : Rel (Net i o) 0ℓ
-  --     _<_ {i} {o} = flip (_~′_ {i} {o})
-      
-  --     ⊗-acc :
-  --         Acc _<_ a
-  --       → Acc _<_ b
-  --       → Acc _<_ (a ⊗ b)
-  --     ⊗-acc (acc rs₁) (acc rs₂) =
-  --       acc λ{x → {! x !}}
-  --       -- acc (λ{(⊗₁ y<n) → ⊗-acc (rs₁ y<n) (acc rs₂)
-  --       --       ;(⊗₂ y<n) → ⊗-acc (acc rs₁) (rs₂ y<n)})
-      
-  --     mutual
-  --       -- proves that all elements smaller than y are also accessible
-  --       <-acc : ∀ {i o : ℕ} n {y} → y < n → Acc _<_ y
-  --       <-acc _ {y} ⨾-id = <-wf y
-  --       <-acc _ {y} id-⨾ = <-wf y
-  --       <-acc n ⨾-assoc = {!   !}
-  --       <-acc n ⊗-assoc = {!   !}
-  --       <-acc _ {y} ⊗-empty = <-wf y
-  --       <-acc _ {y} empty-⊗ = <-wf y
-  --       <-acc n distr = {!   !}
-  --       <-acc n τ-τ = {!   !}
-  --       <-acc n ⨾-τ = {!   !}
-  --       <-acc n (⊗₁ y<n) = {!   !}
-  --       <-acc n (⊗₂ y<n) = {!   !}
-  --       <-acc n (⨾₁ y<n) = {!   !}
-  --       <-acc n (⨾₂ y<n) = {!   !}
+  data Raw : Set where
+    id : {ℕ} → Raw
+    τ : Raw
+    ε⁺ ε⁻ δ⁺ δ⁻ ζ⁺ ζ⁻ : Raw
+    _⊗_ _⨾_ : Raw → Raw → Raw
 
-  --       -- all elements are acessible
-  --       <-wf : WellFounded (_<_ {i} {o})
-  --       <-wf {i} {o} n = acc (<-acc {i} {o} n)
+  erase : Net i o → Raw
+  erase {i} id = id {i}
+  erase τ = τ
+  erase ε⁺ = ε⁺
+  erase ε⁻ = ε⁻
+  erase δ⁺ = δ⁺
+  erase δ⁻ = δ⁻
+  erase ζ⁺ = ζ⁺
+  erase ζ⁻ = ζ⁻
+  erase (a ⊗ b) = erase a ⊗ erase b
+  erase (a ⨾ b) = erase a ⨾ erase b
 
-  --   ~′-normalizing : StronglyNormalizing (_~′_ {i} {o})
-  --   ~′-normalizing = <-wf
+  data Infer : Raw → Set where
+    ok : (n : Net i o) → Infer (erase n)
+    bad : {e : Raw} → Infer e
 
+  infer : (e : Raw) -> Infer e
+  infer id = ok id
+  infer τ = ok τ
+  infer ε⁺ = ok ε⁺
+  infer ε⁻ = ok ε⁻
+  infer δ⁺ = ok δ⁺
+  infer δ⁻ = ok δ⁻
+  infer ζ⁺ = ok ζ⁺
+  infer ζ⁻ = ok ζ⁻
+  infer (x ⊗ y) with infer x | infer y
+  ... | bad | bad = bad
+  ... | _   | bad = bad
+  ... | bad | _ = bad
+  ... | ok {i₁} {o₁} x′ | ok {i₂} {o₂} y′ = ok (_⊗_  x′ y′)
+  infer (a ⨾ b) with infer a | infer b
+  ... | bad | bad = bad
+  ... | _   | bad = bad
+  ... | bad | _ = bad
+  ... | ok {i₁} {o₁} a′ | ok {i₂} {o₂} b′ with o₁ ≟ i₂
+  ... | no _ = bad
+  ... | yes refl = ok (a′ ⨾ b′)
 
-  -- ~′-weakly-confluent : WeaklyConfluent (_~′_ {i} {o})
-  -- ~′-weakly-confluent ⨾-id ⨾-id = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent ⨾-id id-⨾ = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent ⨾-id ⨾-assoc = _ , ⊘ , ⨾₂ ⨾-id ◅ ⊘
-  -- ~′-weakly-confluent ⨾-id (⨾₁ a~′c) =  _ , a~′c ◅ ⊘ , ⨾-id ◅ ⊘
-  -- ~′-weakly-confluent id-⨾ ⨾-id = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent id-⨾ id-⨾ = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent id-⨾ (⨾₂ a~′c) = _ , a~′c ◅ ⊘ , id-⨾ ◅ ⊘
-
-  -- ~′-weakly-confluent ⨾-assoc ⨾-id = _  , ⨾₂ ⨾-id ◅ ⊘ , ⊘
-  -- ~′-weakly-confluent ⨾-assoc ⨾-assoc = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent ⨾-assoc (⨾₁ a~′c) = {!   !} -- probably needs ⨾-assoc-inv
-  -- ~′-weakly-confluent ⨾-assoc (⨾₂ a~′c) = _ , ⨾₂ (⨾₂ a~′c) ◅ ⊘ , ⨾-assoc  ◅ ⊘
-  
-  -- ~′-weakly-confluent ⊗-assoc a~′c = {!   !}
-  
-  -- ~′-weakly-confluent ⊗-empty a~′c = {! a~′c !}
-  -- ~′-weakly-confluent empty-⊗ ⊗-empty = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent empty-⊗ empty-⊗ =  _ , ⊘ , ⊘
-  -- ~′-weakly-confluent empty-⊗ (⊗₂ a~′c) = _ , a~′c ◅ ⊘ , empty-⊗ ◅ ⊘
-  -- ~′-weakly-confluent distr distr = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent distr (⨾₁ a~′c) = {!   !} -- probably needs ⨾-distr-inv or a way to add id
-  -- ~′-weakly-confluent distr (⨾₂ a~′c) = {!   !} -- probably needs ⨾-distr-inv or a way to add id
-  -- ~′-weakly-confluent τ-τ τ-τ = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent ⨾-τ ⨾-τ = _ , ⊘ , ⊘
-  -- ~′-weakly-confluent ⨾-τ (⨾₁ a~′c) = {!   !}
-  -- ~′-weakly-confluent (⊗₁ a~′b) a~′c = {!  a~′c !}
-  -- ~′-weakly-confluent (⊗₂ a~′b) a~′c = {! a~′c  !}
-  -- ~′-weakly-confluent (⨾₁ a~′b) a~′c = {!   !}
-  -- ~′-weakly-confluent (⨾₂ a~′b) a~′c = {!   !}
+  erase-infer≡ok : ∀ (n : Net i o) → infer (erase n) ≡ ok n
+  erase-infer≡ok id = refl
+  erase-infer≡ok τ = refl
+  erase-infer≡ok ε⁺ = refl
+  erase-infer≡ok ε⁻ = refl
+  erase-infer≡ok δ⁺ = refl
+  erase-infer≡ok δ⁻ = refl
+  erase-infer≡ok ζ⁺ = refl
+  erase-infer≡ok ζ⁻ = refl
+  erase-infer≡ok (_⊗_ {{i≡}} {{o≡}} a b)
+    with infer (erase a) | infer (erase b) | erase-infer≡ok a | erase-infer≡ok b
+  ... | ok a′ | ok b′ | refl | refl rewrite i≡ | o≡ = refl
+  erase-infer≡ok (a ⨾ b)
+    with infer (erase a) | infer (erase b) | erase-infer≡ok a | erase-infer≡ok b
+  ... | ok {i₁} {o₁} a′ | ok {i₂} {o₂} b′ | refl | refl with o₁ ≟ i₂
+  ... | no ¬x = ⊥-elim (¬x refl)
+  ... | yes refl = refl
 
 
 module ⟶-Properties where
-  open ~′-Properties renaming (⊗₁* to ~-⊗₁*; ⊗₂* to ~-⊗₂*; ⨾₁* to ~-⨾₁*; ⨾₂* to ~-⨾₂*)
+  open ~-Properties renaming (⊗₁* to ~-⊗₁*; ⊗₂* to ~-⊗₂*; ⨾₁* to ~-⨾₁*; ⨾₂* to ~-⨾₂*)
   -- open ⟶ʳ-Properties hiding (⊗₁*; ⊗₂*; ⨾₁*; ⨾₂*)
   open ⟶ʳ-Properties.WeaklyConfluent
 
@@ -444,5 +437,5 @@ module ⟶-Properties where
 
   --   ⟶-normalizing : StronglyNormalizing (_⟶_ {i} {o})
   --   ⟶-normalizing = ⟵-wf
-
  
+  
