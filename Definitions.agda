@@ -1,4 +1,4 @@
-{-# OPTIONS --overlapping-instances #-}
+{-# OPTIONS --backtracking-instance-search #-}
 open import Data.Nat using (ℕ; _+_)
 open import Data.Nat.Properties using (+-assoc; +-identityˡ; +-identityʳ)
 open import Relation.Binary.PropositionalEquality using (_≡_; sym; trans)
@@ -20,7 +20,9 @@ instance
 
   -- i≡+₃ : {i ≡ i₁ + i₂ + i₃} → i ≡ i₁ + (i₂ + i₃)
   -- i≡+₃ {i} {i₁} {i₂} {i₃} {i≡} = trans i≡ (+-assoc i₁ i₂ i₃)
-
+  
+  {-# OVERLAPPING i≡i+0 #-}
+  
 
 infixl 8 _⨾_
 infixl 9 _⊗_

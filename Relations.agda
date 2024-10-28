@@ -1,4 +1,4 @@
-{-# OPTIONS --overlapping-instances #-}
+{-# OPTIONS --backtracking-instance-search #-}
 open import Level
 open import Data.Nat using (ℕ; _+_)
 open import Data.Nat.Properties using (+-assoc; +-identityˡ; +-identityʳ)
