@@ -1,0 +1,9 @@
+name: cat
+include: .
+depend: 1lab
+flags:
+  --no-load-primitives
+  --cubical
+  --rewriting
+  --guardedness
+  -WnoUnsupportedIndexedMatch

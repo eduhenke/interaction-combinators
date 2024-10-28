@@ -1,0 +1,3 @@
+name: cat
+include: .
+depend: agda-categories
