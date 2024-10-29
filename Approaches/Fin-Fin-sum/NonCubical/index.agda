@@ -1,7 +1,7 @@
 module Approaches.Fin-Fin-sum.NonCubical.index where
 
-open import Data.Nat
-open import Data.Fin hiding (_+_)
+open import Data.Nat hiding (_+_)
+open import Data.Fin hiding (_+_; #_)
 import Data.Sum as Sum
 open Sum
 open import Data.Sum.Properties
@@ -11,15 +11,15 @@ open import Data.Product
 open import Function.Base hiding (id)
 
 data Tree {v} (A : Set v) : Set v where
-  leaf : A → Tree A
-  branch : Tree A → Tree A → Tree A
+  # : A → Tree A
+  _+_ : Tree A → Tree A → Tree A
 
-⊎-tree : Tree ℕ → Set
-⊎-tree (leaf x) = Fin x
-⊎-tree (branch a b) = ⊎-tree a ⊎ ⊎-tree b
+Port : Tree ℕ → Set
+Port (# x) = Fin x
+Port (a + b) = Port a ⊎ Port b
 
 Net : (i o : Tree ℕ) → Set
-Net i o = ⊎-tree i → ⊎-tree o
+Net i o = Port i → Port o
  
 variable
   i i′ i″ : Tree ℕ
@@ -39,7 +39,7 @@ _⊗_ :
     Net i o
   → Net i′ o′
   ------------
-  → Net (branch i i′) (branch o o′)
+  → Net (i + i′) (o + o′)
 _⊗_ = Sum.map
 
 id : ∀ {i : Tree ℕ} → Net i i
@@ -50,7 +50,7 @@ postulate
          {f g : (x : A) → B x}
        → ((x : A) → f x ≡ g x) → f ≡ g
 
-id⊗id : ∀ {i i′ : Tree ℕ} → id {i} ⊗ id {i′} ≡ id {branch i i′}
+id⊗id : ∀ {i i′ : Tree ℕ} → id {i} ⊗ id {i′} ≡ id {i + i′}
 id⊗id = funext [ (λ _ → refl) , (λ _ → refl) ]
 
 ⊗-⨾-distr : ∀ {i o k i′ o′ k′ : Tree ℕ}
@@ -84,7 +84,7 @@ F = record
 F-Monoidal : Monoidal F
 F-Monoidal = monoidalHelper F (record
   { ⊗ = Tensor
-  ; unit = leaf 0
+  ; unit = # 0
   ; unitorˡ = record
     { from = λ{(inj₂ x) → x}
     ; to = inj₂
@@ -110,7 +110,7 @@ F-Monoidal = monoidalHelper F (record
   where
   open Bifunctor
   Tensor : Bifunctor F F F
-  Tensor .F₀ = uncurry branch
+  Tensor .F₀ = uncurry _+_
   Tensor .F₁ = uncurry _⊗_
   Tensor .identity {i , i′} = id⊗id {i} {i′}
   Tensor .homomorphism {_} {_} {_} {f , _} {g , _} = ⊗-⨾-distr {f₁ = f} {g₁ = g}
@@ -143,5 +143,22 @@ F-Symmetric : Symmetric F-Monoidal
 F-Symmetric = record
   { braided = F-Braided
   ; commutative = funext swap-involutive
+  }
+ 
+open import Categories.Category.Monoidal.Traced
+
+trace : ∀ {i o x : Tree ℕ} → Net (i + x) (o + x) → Net i o
+trace nₓ pᵢ with (nₓ (inj₁ pᵢ))
+... | inj₁ pₒ = pₒ
+... | inj₂ pₓ = {!   !}
+
+F-Traced : Traced F-Monoidal
+F-Traced = record
+  { symmetric = F-Symmetric
+  ; trace = trace
+  ; vanishing₁ = {!   !}
+  ; vanishing₂ = {!   !}
+  ; superposing = {!   !}
+  ; yanking = {!   !}
   }
  

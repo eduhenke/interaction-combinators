@@ -1,10 +1,10 @@
 module Net where
 
-open import Data.Nat
+open import Data.Nat hiding (_+_)
 open import Data.Fin
 open import Data.Sum
 open import Data.Sum.Properties
-open import 1Lab.Type hiding (id)
+open import 1Lab.Type hiding (id; _+_)
 open import 1Lab.Path
 open import 1Lab.HLevel
 open import 1Lab.HLevel.Closure
@@ -12,22 +12,22 @@ open import 1Lab.Type.Pi
 open import 1Lab.Equiv
 
 data Tree {v} (A : Type v) : Type v where
-  leaf : A → Tree A
-  branch : Tree A → Tree A → Tree A
+  # : A → Tree A
+  _+_ : Tree A → Tree A → Tree A
 
-⊎-tree : Tree Nat → Type
-⊎-tree (leaf x) = Fin x
-⊎-tree (branch a b) = ⊎-tree a ⊎ ⊎-tree b
+Port : Tree Nat → Type
+Port (# x) = Fin x
+Port (a + b) = Port a ⊎ Port b
 
-⊎-tree-is-hlevel : (t : Tree Nat) → is-hlevel (⊎-tree t) 2
-⊎-tree-is-hlevel (leaf l) = hlevel 2
-⊎-tree-is-hlevel (branch a b) = ⊎-is-hlevel 0 (⊎-tree-is-hlevel a) (⊎-tree-is-hlevel b)
+Port-is-hlevel : (t : Tree Nat) → is-hlevel (Port t) 2
+Port-is-hlevel (# l) = hlevel 2
+Port-is-hlevel (a + b) = ⊎-is-hlevel 0 (Port-is-hlevel a) (Port-is-hlevel b)
 
 Net : (i o : Tree Nat) → Type
-Net i o = ⊎-tree i → ⊎-tree o
+Net i o = Port i → Port o
 
 Net-is-hlevel : (i o : Tree Nat) → is-hlevel (Net i o) 2
-Net-is-hlevel _ o = fun-is-hlevel 2 (⊎-tree-is-hlevel o)
+Net-is-hlevel _ o = fun-is-hlevel 2 (Port-is-hlevel o)
 
 variable
   i i′ i″ : Tree Nat
@@ -47,13 +47,13 @@ _⊗_ :
     Net i o
   → Net i′ o′
   ------------
-  → Net (branch i i′) (branch o o′)
+  → Net (i + i′) (o + o′)
 _⊗_ = ⊎-map
 
 id : ∀ {i : Tree Nat} → Net i i
 id {i} f = f
 
-id⊗id : ∀ {i i′ : Tree Nat} → id {i} ⊗ id {i′} ≡ id {branch i i′}
+id⊗id : ∀ {i i′ : Tree Nat} → id {i} ⊗ id {i′} ≡ id {i + i′}
 id⊗id = funext λ{(inl _) → refl; (inr _) → refl}
 
 ⊗-⨾-distr : ∀ {i o k i′ o′ k′ : Tree Nat}
@@ -95,12 +95,12 @@ open import 1Lab.Extensionality
 F-Monoidal : Monoidal-category F
 F-Monoidal = record
   { -⊗- = record
-    { F₀ = uncurry branch
+    { F₀ = uncurry _+_
     ; F₁ = uncurry _⊗_
     ; F-id = λ{ {i , i′} → id⊗id {i} {i′}}
     ; F-∘  = λ _ (g₁ , g₂) → ⊗-⨾-distr {f₁ = g₁} {f₂ = g₂}
     }
-  ; Unit = leaf 0
+  ; Unit = # 0
   ; unitor-l = record
     { to = NT (λ _ → inr) λ _ _ _ → refl
     ; from = NT (λ{_ (inl ()); _ (inr x) → x}) λ{x y f → funext (λ{(inl ()); (inr x) → refl})}
@@ -129,4 +129,4 @@ F-Monoidal = record
                        ; (inr (inr (inl _))) → refl
                        ; (inr (inr (inr _))) → refl})
   }
- 
+  
