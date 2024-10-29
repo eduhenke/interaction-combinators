@@ -1,8 +1,11 @@
+module Approaches.Fin-Fin-sum.index where
+
 open import Data.Nat
-open import Data.Fin
+open import Data.Fin hiding (_+_)
 open import Data.Sum
 open import Data.Empty
-open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.PropositionalEquality hiding ([_])
+open import Data.Product
 open import Function.Base hiding (id)
 
 data Tree {v} (A : Set v) : Set v where
@@ -29,7 +32,6 @@ _⨾_ :
   → Net i   o
 a ⨾ b = λ i → b (a i)
 
-
 infixl 8 _⊗_
 _⊗_ :
     Net i o
@@ -54,3 +56,72 @@ id⊗id = funext [ (λ _ → refl) , (λ _ → refl) ]
   {f₂ : Net i′ k′} {g₂ : Net k′ o′}
   → ((f₁ ⨾ g₁) ⊗ (f₂ ⨾ g₂)) ≡ ((f₁ ⊗ f₂) ⨾ (g₁ ⊗ g₂))
 ⊗-⨾-distr = funext [ (λ _ → refl) , (λ _ → refl) ]
+
+open import Level
+open import Categories.Category
+open import Categories.Category.Monoidal
+open import Categories.Category.Product
+open import Categories.Functor.Bifunctor
+
+F : Category 0ℓ 0ℓ 0ℓ
+F = record
+  { Obj = Tree ℕ
+  ; _⇒_ = Net
+  ; _≈_ = _≡_
+  ; id = id
+  ; _∘_ = flip _⨾_
+  ; assoc = refl
+  ; sym-assoc = refl
+  ; identityˡ = refl
+  ; identityʳ = refl
+  ; identity² = refl
+  ; equiv = isEquivalence
+  ; ∘-resp-≈ = cong₂ (flip _⨾_)
+  }
+
+F-Monoidal : Monoidal F
+F-Monoidal = monoidalHelper F (record
+  { ⊗ = Tensor
+  ; unit = leaf 0
+  ; unitorˡ = record
+    { from = λ{(inj₂ x) → x}
+    ; to = inj₂
+    ; iso = record { isoˡ = funext (λ{(inj₂ x) → refl}) ; isoʳ = refl } }
+  ; unitorʳ = record
+    { from = λ{(inj₁ x) → x}
+    ; to = inj₁
+    ; iso = record { isoˡ = funext (λ{(inj₁ x) → refl}) ; isoʳ = refl } }
+  ; associator = record
+    { from = Data.Sum.assocʳ
+    ; to = Data.Sum.assocˡ
+    ; iso = record
+      { isoˡ = funext (λ
+        {(inj₁ (inj₁ _)) → refl
+        ; (inj₁ (inj₂ _)) → refl
+        ; (inj₂ _) → refl})
+      ; isoʳ = funext (λ
+        {(inj₁ _) → refl
+       ; (inj₂ (inj₁ _)) → refl
+       ; (inj₂ (inj₂ _)) → refl})
+      }
+    }
+  ; unitorˡ-commute = funext (λ{(inj₂ _) → refl})
+  ; unitorʳ-commute = funext (λ{(inj₁ _) → refl})
+  ; assoc-commute = funext (λ{(inj₁ (inj₁ _)) → refl
+                            ; (inj₁ (inj₂ _)) → refl
+                            ; (inj₂ _) → refl})
+  ; triangle = funext (λ{(inj₁ (inj₁ _)) → refl
+                       ; (inj₂ _) → refl})
+  ; pentagon = funext (λ{(inj₁ (inj₁ (inj₁ _))) → refl
+                       ; (inj₁ (inj₁ (inj₂ _))) → refl
+                       ; (inj₁ (inj₂ _)) → refl
+                       ; (inj₂ _) → refl})
+  })
+  where
+  open Bifunctor
+  Tensor : Bifunctor F F F
+  Tensor .F₀ = uncurry branch
+  Tensor .F₁ = uncurry _⊗_
+  Tensor .identity {i , i′} = id⊗id {i} {i′}
+  Tensor .homomorphism {_} {_} {_} {f , _} {g , _} = ⊗-⨾-distr {f₁ = f} {g₁ = g}
+  Tensor .F-resp-≈ (f≡g₁ , f≡g₂) rewrite f≡g₁ | f≡g₂ = refl
