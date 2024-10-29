@@ -2,7 +2,9 @@ module Approaches.Fin-Fin-sum.index where
 
 open import Data.Nat
 open import Data.Fin hiding (_+_)
-open import Data.Sum
+import Data.Sum as Sum
+open Sum
+open import Data.Sum.Properties
 open import Data.Empty
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Data.Product
@@ -38,7 +40,7 @@ _⊗_ :
   → Net i′ o′
   ------------
   → Net (branch i i′) (branch o o′)
-_⊗_ = Data.Sum.map
+_⊗_ = Sum.map
 
 id : ∀ {i : Tree ℕ} → Net i i
 id {i} f = f
@@ -86,36 +88,24 @@ F-Monoidal = monoidalHelper F (record
   ; unitorˡ = record
     { from = λ{(inj₂ x) → x}
     ; to = inj₂
-    ; iso = record { isoˡ = funext (λ{(inj₂ x) → refl}) ; isoʳ = refl } }
+    ; iso = record { isoˡ = funext (λ{(inj₂ _) → refl}) ; isoʳ = refl } }
   ; unitorʳ = record
     { from = λ{(inj₁ x) → x}
     ; to = inj₁
-    ; iso = record { isoˡ = funext (λ{(inj₁ x) → refl}) ; isoʳ = refl } }
+    ; iso = record { isoˡ = funext (λ{(inj₁ _) → refl}) ; isoʳ = refl } }
   ; associator = record
-    { from = Data.Sum.assocʳ
-    ; to = Data.Sum.assocˡ
+    { from = Sum.assocʳ
+    ; to = Sum.assocˡ
     ; iso = record
-      { isoˡ = funext (λ
-        {(inj₁ (inj₁ _)) → refl
-        ; (inj₁ (inj₂ _)) → refl
-        ; (inj₂ _) → refl})
-      ; isoʳ = funext (λ
-        {(inj₁ _) → refl
-       ; (inj₂ (inj₁ _)) → refl
-       ; (inj₂ (inj₂ _)) → refl})
+      { isoˡ = funext ([ [ (λ _ → refl) , (λ _ → refl) ] , (λ _ → refl) ])
+      ; isoʳ = funext ([ ((λ _ → refl)) , [ (λ _ → refl) , (λ _ → refl) ] ])
       }
     }
   ; unitorˡ-commute = funext (λ{(inj₂ _) → refl})
   ; unitorʳ-commute = funext (λ{(inj₁ _) → refl})
-  ; assoc-commute = funext (λ{(inj₁ (inj₁ _)) → refl
-                            ; (inj₁ (inj₂ _)) → refl
-                            ; (inj₂ _) → refl})
-  ; triangle = funext (λ{(inj₁ (inj₁ _)) → refl
-                       ; (inj₂ _) → refl})
-  ; pentagon = funext (λ{(inj₁ (inj₁ (inj₁ _))) → refl
-                       ; (inj₁ (inj₁ (inj₂ _))) → refl
-                       ; (inj₁ (inj₂ _)) → refl
-                       ; (inj₂ _) → refl})
+  ; assoc-commute = funext ([ [ (λ _ → refl) , (λ _ → refl) ] , (λ _ → refl) ])
+  ; triangle = funext ([ [ (λ _ → refl) , (λ()) ] , (λ _ → refl) ])
+  ; pentagon = funext ([ [ [ (λ _ → refl) , (λ _ → refl) ] , (λ _ → refl) ] , (λ _ → refl) ])
   })
   where
   open Bifunctor
@@ -125,3 +115,33 @@ F-Monoidal = monoidalHelper F (record
   Tensor .identity {i , i′} = id⊗id {i} {i′}
   Tensor .homomorphism {_} {_} {_} {f , _} {g , _} = ⊗-⨾-distr {f₁ = f} {g₁ = g}
   Tensor .F-resp-≈ (f≡g₁ , f≡g₂) rewrite f≡g₁ | f≡g₂ = refl
+
+open import Categories.Category.Monoidal.Symmetric
+open import Categories.Category.Monoidal.Braided
+open import Categories.NaturalTransformation
+
+F-Braided : Braided F-Monoidal
+F-Braided = record
+  { braiding = record
+    { F⇒G = record
+      { η = λ{(a , b) f → Sum.swap f}
+      ; commute = λ f → funext ([ (λ _ → refl) , (λ _ → refl) ])
+      ; sym-commute = λ f → funext ([ (λ _ → refl) , (λ _ → refl) ])
+      }
+    ; F⇐G = record
+      { η = λ{(a , b) f → Sum.swap f}
+      ; commute = λ f → funext ([ (λ _ → refl) , (λ _ → refl) ])
+      ; sym-commute = λ f → funext ([ (λ _ → refl) , (λ _ → refl) ])
+      }
+    ; iso = λ X → record { isoˡ = funext swap-involutive ; isoʳ = funext swap-involutive }
+    }
+  ; hexagon₁ = funext ([ [ (λ _ → refl) , (λ _ → refl) ] , (λ _ → refl) ])
+  ; hexagon₂ = funext ([ ((λ _ → refl)) , [ (λ _ → refl) , (λ _ → refl) ] ])
+  }
+
+F-Symmetric : Symmetric F-Monoidal
+F-Symmetric = record
+  { braided = F-Braided
+  ; commutative = funext swap-involutive
+  }
+ 
