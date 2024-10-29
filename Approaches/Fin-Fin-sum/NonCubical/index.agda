@@ -1,4 +1,4 @@
-module Approaches.Fin-Fin-sum.index where
+module Approaches.Fin-Fin-sum.NonCubical.index where
 
 open import Data.Nat
 open import Data.Fin hiding (_+_)
