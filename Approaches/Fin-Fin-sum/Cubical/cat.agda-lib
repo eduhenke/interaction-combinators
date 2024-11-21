@@ -6,3 +6,4 @@ flags:
   --cubical
   --rewriting
   --guardedness
+  -W noUnsupportedIndexedMatch
