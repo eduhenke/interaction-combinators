@@ -1,21 +1,21 @@
-open import Data.Nat using (ℕ; suc; _≤_; z≤n; s≤s) renaming (_+_ to _+ⁿ_)
+open import Data.Nat using (ℕ; suc) renaming (_+_ to _+ⁿ_)
 open import Data.Fin using (Fin; _↑ˡ_; _↑ʳ_; inject≤) renaming (suc to _+1)
 open import Data.Fin.Patterns
 open import Data.Vec using (Vec; _∷_; []; map)
-open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; sym; subst; refl; cong; subst₂)
+open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; sym; subst; refl; cong; subst₂; trans)
 open import Relation.Nullary.Negation
-open import Data.Product hiding (map)
+open import Data.Product hiding (map; _<*>_)
 open import Function.Base hiding (id)
 open import Alphabet
 
-module _ ⦃ σ : Alphabet ⦄ where
-open Alphabet.Alphabet σ
+module _ ⦃ alphabet : Alphabet ⦄ where
+open Alphabet.Alphabet alphabet
 
 pattern 1+ n = suc n
 pattern 2+ n = 1+ (1+ n)
   
 variable
-  n m l : ℕ
+  n m l k : ℕ
   A B : Set
 
 data Term (n : ℕ) : Set where
@@ -35,11 +35,17 @@ p ∧ 𝟘 = p
 _ ∧ ω = ω
 _ ∧ _ = 𝟚
 
+infix  10 _≤_
+_≤_ : M → M → Set
+p ≤ q = p ≡ p ∧ q
+
 p∧p≡p : ∀ {p} → p ∧ p ≡ p
 p∧p≡p {𝟘} = refl
 p∧p≡p {𝟙} = refl
 p∧p≡p {𝟚} = refl
 p∧p≡p {ω} = refl
+
+≤-refl = p∧p≡p
 
 p∧𝟘≡p : ∀ {p} → p ∧ 𝟘 ≡ p
 p∧𝟘≡p {𝟘} = refl
@@ -80,7 +86,7 @@ _,_≔_ : (γ : Conₘ n) (x : Fin n) (p : M) → Conₘ n
 
 variable
   p q r : M
-  γ γ′ δ η θ χ : Conₘ n
+  γ γ′ δ δ′ η θ χ : Conₘ n
   x y : Fin n
   t u v w z : Term n
 
@@ -130,10 +136,10 @@ data _▸_ {n : ℕ} : (γ : Conₘ n) → Term n → Set where
   agent : (α : Agent)
     → ⦃ l≡ : l ≡ arity α ⦄
     → (v : Vec (∃₂ _▸_) l)
+    → sumᶜ (map proj₁ v) ▸ agent α (map (proj₁ ∘ proj₂) v)
     -- → {γ : Conₘ n} → { γ≡ : γ ≡ sumᶜ (Data.Vec.map proj₁ v) }
     -- → {t : Term n} → { t≡ : t ≡ agent α (Data.Vec.map (proj₁ ∘ proj₂) v) }
     -- → γ ▸ t
-    → sumᶜ (map proj₁ v) ▸ agent α (map (proj₁ ∘ proj₂) v)
 
 -- open import Data.Unit
 -- σ-trivial : Alphabet
@@ -182,41 +188,23 @@ mutual
 Subst : ℕ → ℕ → Set
 Subst m n = Fin n → Term m
 
+variable
+  σ : Subst m n
+
 mutual
   _[_]ᵃ : (args : Vec (Term n) l) (σ : Subst m n) → Vec (Term m) l
   [] [ σ ]ᵃ = []
   (x ∷ args) [ σ ]ᵃ = x [ σ ] ∷ args [ σ ]ᵃ
   
+  infix 25 _[_]
   _[_] : (t : Term n) (σ : Subst m n) → Term m
   var x [ σ ] = σ x
   agent α x [ σ ] = agent α (x [ σ ]ᵃ)
-
-
--- ω∌𝟘ᶜ : ¬ x ◂ ω ∈ 𝟘ᶜ
--- ω∌𝟘ᶜ (there ω∈) = ω∌𝟘ᶜ ω∈
-
--- 𝟘ᶜ-valid : {n : ℕ} → Conₘ-is-valid (𝟘ᶜ {n})
--- 𝟘ᶜ-valid _ = ω∌𝟘ᶜ
-
--- ω∌𝟘ᶜ[x≔𝟙] : ¬ x ◂ ω ∈ (𝟘ᶜ , y ≔ 𝟙)
--- ω∌𝟘ᶜ[x≔𝟙] {_} {0F} {0F} ()
--- ω∌𝟘ᶜ[x≔𝟙] {_} {0F} {y +1} ()
--- ω∌𝟘ᶜ[x≔𝟙] {_} {x +1} {0F} (there ω∈) = ω∌𝟘ᶜ ω∈
--- ω∌𝟘ᶜ[x≔𝟙] {_} {x +1} {y +1} (there ω∈) = ω∌𝟘ᶜ[x≔𝟙] ω∈
-
--- 𝟘ᶜ[x≔1]-valid : {n : ℕ} → {x : Fin n} → Conₘ-is-valid (𝟘ᶜ {n} , x ≔ 𝟙)
--- 𝟘ᶜ[x≔1]-valid _ = ω∌𝟘ᶜ[x≔𝟙]
-
--- -- ≤ᶜ-valid : Conₘ-is-valid γ → γ ≤ᶜ δ → Conₘ-is-valid δ
--- -- ≤ᶜ-valid γ-ok ρ = {! ρ  !}
 
 wkConₘ : (ρ : Wk m n) → Conₘ n → Conₘ m
 wkConₘ id γ = γ
 wkConₘ (step ρ) γ = wkConₘ ρ γ ∙ 𝟘
 wkConₘ (lift ρ) (γ ∙ p) = wkConₘ ρ γ ∙ p
-
--- -- 𝟘ᶜ▸wk-t₀ : {n : ℕ} → (t₀ : Term 0) → (𝟘ᶜ {n}) ▸ wk z≤n t₀
--- -- 𝟘ᶜ▸wk-t₀ (agent α x) = agent α {!   !}
 
 wk-≤ᶜ : (ρ : Wk m n) → γ ≤ᶜ δ → wkConₘ ρ γ ≤ᶜ wkConₘ ρ δ
 wk-≤ᶜ id γ≤δ = γ≤δ
@@ -258,14 +246,52 @@ wkUsage ρ (agent α v) =
     t≡t′ ρ [] = refl
     t≡t′ ρ ((γ , t , γ▸t) ∷ v) rewrite t≡t′ ρ v = refl
 
--- -- ▸-subst : (t : Term n) (u : Term m) → ▸ t → ▸ u → (x : Fin n) → ▸ (t [ x := u ])
--- -- ▸-subst (var 0F) u _ ▸u 0F =
--- --   ▸-wk (m≤n⇒m≤1+n (m≤n⇒m≤o+n _ ≤-refl)) u ▸u
--- -- ▸-subst (var 0F) u ▸t ▸u (x +1) =
--- --   -- ▸-wk {!   !} (var 0F) ▸t
--- --   𝟘ᶜ ∙ 𝟙 , (λ{_ (there ω∈) → ω∌𝟘ᶜ ω∈}) , var
--- -- ▸-subst (var (y +1)) u ▸t ▸u 0F =
--- --   _ , (λ{_ (there ω∈) → ω∌𝟘ᶜ[x≔𝟙] ω∈}) , var
--- -- ▸-subst (var (y +1)) u (γ , γ-ok , γ▸t) ▸u (x +1) =
--- --   ▸-wk (m≤n⇒m≤1+n ≤-refl) _ (▸-subst (var y) u (_ , 𝟘ᶜ[x≔1]-valid , var) ▸u x)
--- -- ▸-subst (agent α args) u ▸t ▸u x = {!   !}    
+infixr 45 _·_
+
+_·_ : M → M → M
+𝟘 · _ = 𝟘
+_ · 𝟘 = 𝟘
+𝟙 · p = p
+p · 𝟙 = p
+_ · _ = ω
+
+_·ᶜ_ : (p : M) (γ : Conₘ n) → Conₘ n
+p ·ᶜ ε = ε
+p ·ᶜ (γ ∙ q) = (p ·ᶜ γ) ∙ (p · q)
+
+data Substₘ : (m n : ℕ) → Set where
+  []  : Substₘ m 0
+  _⊙_ : Substₘ m n → Conₘ m → Substₘ m (1+ n)
+
+variable
+  Ψ Φ : Substₘ m n
+
+-- Application of substitution matrix from the right
+
+infixl 50 _<*_
+_<*_ : (γ : Conₘ n) → (Ψ : Substₘ m n) → Conₘ m
+ε <* [] = 𝟘ᶜ
+(γ ∙ p) <* (Ψ ⊙ δ) = (p ·ᶜ δ) +ᶜ (γ <* Ψ) --p ? δ +ᶜ (γ <* Ψ)
+
+substₘ : (Ψ : Substₘ m n) → (γ : Conₘ n) → Conₘ m
+substₘ Ψ γ = γ <* Ψ
+
+-- Composition of substitution matrices
+
+_<*>_ : (Ψ : Substₘ m k) (Φ : Substₘ k n) → Substₘ m n
+Ψ <*> [] = []
+Ψ <*> (Φ ⊙ δ) = (Ψ <*> Φ) ⊙ (δ <* Ψ)
+
+-- Well-formed modality substitutions: if ∀ x. γ_x ▸ σ x, where
+-- γ_x is the x-th row vector of Ψ, then Ψ ▶ σ.
+
+_▶_ : Substₘ m n → Subst m n → Set
+_▶_ {n = n} Ψ σ =
+  (x : Fin n) → ((𝟘ᶜ , x ≔ 𝟙) <* Ψ) ▸ σ x
+
+substₘ-lemma :
+  (Ψ : Substₘ m n) →
+  Ψ ▶ σ → γ ▸ t → substₘ Ψ γ ▸ t [ σ ]
+substₘ-lemma Ψ Ψ▶σ var = Ψ▶σ _
+substₘ-lemma Ψ Ψ▶σ (sub γ▸t x) = sub (substₘ-lemma Ψ Ψ▶σ γ▸t) {!   !}
+substₘ-lemma Ψ Ψ▶σ (agent α v) = {!   !}
