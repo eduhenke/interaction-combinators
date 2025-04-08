@@ -1,0 +1,4 @@
+name: net
+include: .
+depend: graded-type-theory
+
