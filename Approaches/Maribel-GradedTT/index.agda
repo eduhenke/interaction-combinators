@@ -1,14 +1,16 @@
 open import Data.Nat using (ℕ; suc) renaming (_+_ to _+ⁿ_)
 open import Data.Fin using (Fin; _↑ˡ_; _↑ʳ_; inject≤) renaming (suc to _+1)
 open import Data.Fin.Patterns
-open import Data.Vec using (Vec; _∷_; []; map)
+open import Data.Vec using (Vec; _∷_; []; map; _++_)
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; sym; subst; refl; cong; subst₂; trans; cong₂)
 open import Relation.Nullary.Negation
 open import Data.Product hiding (map; _<*>_)
-open import Function.Base hiding (id)
+open import Function.Base hiding (id; _⟨_⟩_)
+open import Data.Vec.Relation.Binary.Pointwise.Inductive using (Pointwise)
+open Pointwise
 open import Alphabet
 open import Modality using (Zero-one-twice-many; zero-one-twice-many-modality)
-
+open Zero-one-twice-many using (𝟚)
 open import Graded.Modality Zero-one-twice-many using () renaming (Modality to Modalityᵍ)
 open Modalityᵍ zero-one-twice-many-modality
 open import Graded.Modality.Properties zero-one-twice-many-modality
@@ -23,12 +25,14 @@ pattern 1+ n = suc n
 pattern 2+ n = 1+ (1+ n)
   
 variable
-  n m l k : ℕ
+  n m l l′ k : ℕ
   A B : Set
 
 data Term (n : ℕ) : Set where
   var : Fin n → Term n
-  agent : (α : Agent) → ⦃ l≡ : l ≡ arity α ⦄ → Vec (Term n) l → Term n
+  _⟨_⟩ : (α : Agent) → ⦃ l≡ : l ≡ arity α ⦄ → (args : Vec (Term n) l) → Term n
+
+infixl 40 _⟨_⟩
 
 data Wk : ℕ → ℕ → Set where
   id    : {n : ℕ}   → Wk n n                    -- η : Γ ≤ Γ.
@@ -106,40 +110,17 @@ sumᶜ : Vec (Conₘ n) l → Conₘ n
 sumᶜ [] = 𝟘ᶜ
 sumᶜ (γ ∷ γs) = γ +ᶜ sumᶜ γs
 
+-- Well-usage
 data _▸_ {n : ℕ} : (γ : Conₘ n) → Term n → Set where
   sub : γ ▸ t
       → δ ≤ᶜ γ
       → δ ▸ t
   var : (𝟘ᶜ , x ≔ 𝟙) ▸ var x
-  agent : (α : Agent)
+  agent : {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l}
+    → (α : Agent)
     → ⦃ l≡ : l ≡ arity α ⦄
-    → (v : Vec (∃₂ _▸_) l)
-    → sumᶜ (map proj₁ v) ▸ agent α (map (proj₁ ∘ proj₂) v)
-    -- → {γ : Conₘ n} → { γ≡ : γ ≡ sumᶜ (Data.Vec.map proj₁ v) }
-    -- → {t : Term n} → { t≡ : t ≡ agent α (Data.Vec.map (proj₁ ∘ proj₂) v) }
-    -- → γ ▸ t
-
--- open import Data.Unit
--- σ-trivial : Alphabet
--- σ-trivial = record
---   { Agent = ⊤
---   ; arity = λ{tt → 0}
---   }
--- example₁ : _▸_ ⦃ σ-trivial ⦄ ε (agent tt ε)
--- example₁ = agent tt ε
-
--- instance
---   σ-pair : Alphabet
---   σ-pair = record
---     { Agent = ⊤
---     ; arity = λ{tt → 2}
---     }
-
--- example₂ : ε ∙ 𝟚 ▸ agent tt (ε ∙ var 0F ∙ var 0F)
--- example₂ = agent tt (ε ∙ (-, -, var) ∙ (-, -, var))
-
--- example₃ : ε ∙ 𝟙 ∙ 𝟙 ▸ agent tt (ε ∙ var 0F ∙ var 1F)
--- example₃ = agent tt (ε ∙ (-, -, var) ∙ (-, -, var))
+    → (args : Pointwise _▸_ γs ts)
+    → sumᶜ γs ▸ α ⟨ ts ⟩
 
 Conₘ-is-valid : (γ : Conₘ n) → Set
 Conₘ-is-valid γ = ∀ x → ¬ x ◂ ω ∈ γ
@@ -161,7 +142,7 @@ mutual
   
   wk : (ρ : Wk m n) (t : Term n) → Term m
   wk ρ (var x) = var (wkVar ρ x)
-  wk ρ (agent α args) = agent α (wkArgs ρ args)
+  wk ρ (α ⟨ args ⟩) = α ⟨ wkArgs ρ args ⟩
 
 Subst : ℕ → ℕ → Set
 Subst m n = Fin n → Term m
@@ -177,7 +158,7 @@ mutual
   infix 25 _[_]
   _[_] : (t : Term n) (σ : Subst m n) → Term m
   var x [ σ ] = σ x
-  agent α x [ σ ] = agent α (x [ σ ]ᵃ)
+  α ⟨ x ⟩ [ σ ] = α ⟨ x [ σ ]ᵃ ⟩
 
 wkConₘ : (ρ : Wk m n) → Conₘ n → Conₘ m
 wkConₘ id γ = γ
@@ -209,20 +190,20 @@ wkUsageVar (lift ρ) (x +1) = cong (λ γ → γ ∙ 𝟘) (wkUsageVar ρ x)
 wkUsage : (ρ : Wk m n) → γ ▸ t → wkConₘ ρ γ ▸ wk ρ t
 wkUsage ρ var = subst (λ γ → γ ▸ wk ρ (var _)) (sym (wkUsageVar ρ _)) var
 wkUsage ρ (sub γ▸t x) = sub (wkUsage ρ γ▸t) (wk-≤ᶜ ρ x)
-wkUsage ρ (agent α v) =
-  subst₂ _▸_ (γ=γ′ ρ v) (cong (agent α) (t≡t′ ρ v)) (agent α (walk ρ v))
+wkUsage ρ (agent {_} {γs} {ts} α v) =
+  subst₂ _▸_ (γ=γ′ ρ γs) refl (agent α (walk ρ v))
   where
-    walk : (ρ : Wk m n) → Vec (∃₂ (_▸_ {n})) l → Vec (∃₂ (_▸_ {m})) l
+    walk : ∀ {n l} {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l} → (ρ : Wk m n) → Pointwise _▸_ γs ts → Pointwise _▸_ (map (wkConₘ ρ) γs) (wkArgs ρ ts)
     walk ρ [] = []
-    walk ρ ((γ , t , γ▸t) ∷ v) = (wkConₘ ρ γ , wk ρ t , wkUsage ρ γ▸t) ∷ walk ρ v
+    walk ρ (γ▸t ∷ v) = wkUsage ρ γ▸t ∷ walk ρ v
 
-    γ=γ′ : ∀ {l n m} (ρ : Wk m n) (v : Vec _ l) → sumᶜ (map proj₁ (walk ρ v)) ≡ wkConₘ ρ (sumᶜ (map proj₁ v))
+    γ=γ′ : ∀ {n l} (ρ : Wk m n) (γs : Vec (Conₘ n) l) → sumᶜ (map (wkConₘ ρ) γs) ≡ wkConₘ ρ (sumᶜ γs)
     γ=γ′ ρ [] = sym (wk-𝟘ᶜ ρ)
-    γ=γ′ ρ ((γ , t , γ▸t) ∷ v) rewrite wk-+ᶜ {γ = γ} {δ = sumᶜ (map proj₁ v)} ρ = cong (_ +ᶜ_) (γ=γ′ ρ v)
+    γ=γ′ ρ (γ ∷ γs) rewrite wk-+ᶜ {γ = γ} {δ = sumᶜ γs} ρ = cong (_ +ᶜ_) (γ=γ′ ρ γs)
 
-    t≡t′ : ∀ {l n m} (ρ : Wk m n) (v : Vec _ l) → map (proj₁ ∘ proj₂) (walk ρ v) ≡ wkArgs ρ (map (proj₁ ∘ proj₂) v)
-    t≡t′ ρ [] = refl
-    t≡t′ ρ ((γ , t , γ▸t) ∷ v) rewrite t≡t′ ρ v = refl
+    -- t≡t′ : ∀ {n l} (ρ : Wk m n) (ts : Vec (Term n) l) → map (wk ρ) ts ≡ wkArgs ρ ts
+    -- t≡t′ ρ [] = refl
+    -- t≡t′ ρ (t ∷ ts) rewrite t≡t′ ρ ts = refl
 
 infixr 45 _·ᶜ_
 _·ᶜ_ : (p : M) (γ : Conₘ n) → Conₘ n
@@ -241,7 +222,7 @@ variable
 infixl 50 _<*_
 _<*_ : (γ : Conₘ n) → (Ψ : Substₘ m n) → Conₘ m
 ε <* [] = 𝟘ᶜ
-(γ ∙ p) <* (Ψ ⊙ δ) = (p ·ᶜ δ) +ᶜ (γ <* Ψ) --p ? δ +ᶜ (γ <* Ψ)
+(γ ∙ p) <* (Ψ ⊙ δ) = (p ·ᶜ δ) +ᶜ (γ <* Ψ)
 
 substₘ : (Ψ : Substₘ m n) → (γ : Conₘ n) → Conₘ m
 substₘ Ψ γ = γ <* Ψ
@@ -347,17 +328,47 @@ substₘ-lemma :
   Ψ ▶ σ → γ ▸ t → substₘ Ψ γ ▸ t [ σ ]
 substₘ-lemma Ψ Ψ▶σ var = Ψ▶σ _
 substₘ-lemma Ψ Ψ▶σ (sub γ▸t x) = sub (substₘ-lemma Ψ Ψ▶σ γ▸t) (<*-monotone Ψ x)
-substₘ-lemma Ψ Ψ▶σ (agent α v) =
-  subst₂ _▸_ (γ=γ′ Ψ Ψ▶σ v) (cong (agent α) (t=t′ Ψ Ψ▶σ v)) (agent α (walk Ψ Ψ▶σ v))
+substₘ-lemma Ψ Ψ▶σ (agent {_} {γs} {ts} α v) =
+  subst₂ _▸_ (γ=γ′ Ψ Ψ▶σ γs) refl (agent α (walk Ψ Ψ▶σ v))
   where
-    walk : (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ) → Vec (∃₂ (_▸_ {n})) l → Vec (∃₂ (_▸_ {m})) l
+    walk : ∀ {n l σ} {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l} → (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ)
+      → Pointwise _▸_ γs ts → Pointwise _▸_ (map (substₘ Ψ) γs) (ts [ σ ]ᵃ)
     walk Ψ Ψ▶σ [] = []
-    walk Ψ Ψ▶σ ((γ , t , γ▸t) ∷ v) = (_ , _ , substₘ-lemma Ψ Ψ▶σ γ▸t) ∷ walk Ψ Ψ▶σ v
+    walk Ψ Ψ▶σ (γ▸t ∷ v) = substₘ-lemma Ψ Ψ▶σ γ▸t ∷ walk Ψ Ψ▶σ v
 
-    γ=γ′ : (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ) (v : Vec _ l) → sumᶜ (map proj₁ (walk Ψ Ψ▶σ v)) ≡ substₘ Ψ (sumᶜ (map proj₁ v))
+    γ=γ′ : ∀ {n l σ} (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ) (γs : Vec (Conₘ n) l)
+      → sumᶜ (map (substₘ Ψ) γs) ≡ substₘ Ψ (sumᶜ γs)
     γ=γ′ Ψ Ψ▶σ [] = sym (<*-zeroˡ Ψ)
-    γ=γ′ Ψ Ψ▶σ ((γ , t , γ▸t) ∷ v) rewrite <*-distrib-+ᶜ Ψ γ (sumᶜ (map proj₁ v)) = cong (_ +ᶜ_) (γ=γ′ Ψ Ψ▶σ v)
+    γ=γ′ Ψ Ψ▶σ (γ ∷ γs) rewrite <*-distrib-+ᶜ Ψ γ (sumᶜ γs) = cong (_ +ᶜ_) (γ=γ′ Ψ Ψ▶σ γs)
 
-    t=t′ : (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ) (v : Vec _ l) → map (proj₁ ∘ proj₂) (walk Ψ Ψ▶σ v) ≡ (map (proj₁ ∘ proj₂) v [ σ ]ᵃ)
-    t=t′ Ψ Ψ▶σ [] = refl
-    t=t′ Ψ Ψ▶σ ((γ , t , γ▸t) ∷ v) rewrite t=t′ Ψ Ψ▶σ v = refl
+-- data Equation {n : ℕ} : (t u : Term n) → Set where
+--   _＝_ : (t u : Term n) → Equation t u
+--   eq-sym : Equation t u → Equation u t
+
+-- -- Rule
+-- record _⋈_ (α β : Agent) : Set where
+--   field
+--     {nʳ} : ℕ
+--     lhs : Vec (Term nʳ) (arity α)
+--     rhs : Vec (Term nʳ) (arity β)
+--     γs : Vec (Conₘ nʳ) (arity α +ⁿ arity β)
+--     γs▸ts : Pointwise _▸_ γs (lhs ++ rhs)
+--     well-used : ∀ x → x ◂ 𝟚 ∈ sumᶜ γs
+
+-- record Configuration : Set where
+--   field
+--     rules : ∀ α β → α ⋈ β
+--     {nᶜ lʰ lᵉ} : ℕ
+--     head : Vec (Term nᶜ) lʰ
+--     body : Vec (∃₂ (Equation {nᶜ})) lᵉ
+--     γsʰ : Vec (Conₘ nᶜ) lʰ
+--     γsᵇ : Vec (Conₘ nᶜ × Conₘ nᶜ) lᵉ
+--     γsʰ▸head : Pointwise _▸_ γsʰ head
+--     γsᵇ▸body : Pointwise (λ{(γ , δ) (t , u , _) → γ ▸ t × δ ▸ u}) γsᵇ body
+  
+--   γʰ = sumᶜ γsʰ
+--   γᵇ = sumᶜ (map (uncurry _+ᶜ_) γsᵇ)
+--   γᶜ = γʰ +ᶜ γᵇ
+
+--   field
+--     well-used : Conₘ-is-valid γᶜ 
