@@ -87,7 +87,6 @@ infix  10 _≤ᶜ_
 ≤ᶜ-refl {_} {ε} = ε
 ≤ᶜ-refl {_} {γ ∙ p} = ≤ᶜ-refl ∙ ≤-refl
 
-
 p≤𝟘 : p ≤ 𝟘
 p≤𝟘 {Zero-one-twice-many.𝟘} = refl
 p≤𝟘 {Zero-one-twice-many.𝟙} = refl
@@ -180,6 +179,10 @@ wk-+ᶜ id = refl
 wk-+ᶜ {γ = γ} {δ = δ} (step ρ) rewrite wk-+ᶜ {γ = γ} {δ = δ} ρ = refl
 wk-+ᶜ {γ = γ ∙ p} {δ ∙ q} (lift ρ) rewrite wk-+ᶜ {γ = γ} {δ = δ} ρ = refl
 
+wk-sumᶜ : ∀ {n l} (ρ : Wk m n) (γs : Vec (Conₘ n) l) → sumᶜ (map (wkConₘ ρ) γs) ≡ wkConₘ ρ (sumᶜ γs)
+wk-sumᶜ ρ [] = sym (wk-𝟘ᶜ ρ)
+wk-sumᶜ ρ (γ ∷ γs) rewrite wk-+ᶜ {γ = γ} {δ = sumᶜ γs} ρ = cong (_ +ᶜ_) (wk-sumᶜ ρ γs)
+
 wkUsageVar : (ρ : Wk m n) → (x : Fin n)
            → wkConₘ ρ (𝟘ᶜ , x ≔ p) ≡ 𝟘ᶜ , wkVar ρ x ≔ p
 wkUsageVar id x = refl
@@ -191,19 +194,14 @@ wkUsage : (ρ : Wk m n) → γ ▸ t → wkConₘ ρ γ ▸ wk ρ t
 wkUsage ρ var = subst (λ γ → γ ▸ wk ρ (var _)) (sym (wkUsageVar ρ _)) var
 wkUsage ρ (sub γ▸t x) = sub (wkUsage ρ γ▸t) (wk-≤ᶜ ρ x)
 wkUsage ρ (agent {_} {γs} {ts} α v) =
-  subst₂ _▸_ (γ=γ′ ρ γs) refl (agent α (walk ρ v))
+  subst (_▸ _) (wk-sumᶜ ρ γs) (agent α (walk ρ v))
   where
-    walk : ∀ {n l} {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l} → (ρ : Wk m n) → Pointwise _▸_ γs ts → Pointwise _▸_ (map (wkConₘ ρ) γs) (wkArgs ρ ts)
+    walk : ∀ {n l} {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l}
+      → (ρ : Wk m n)
+      → Pointwise _▸_ γs ts
+      → Pointwise _▸_ (map (wkConₘ ρ) γs) (wkArgs ρ ts)
     walk ρ [] = []
     walk ρ (γ▸t ∷ v) = wkUsage ρ γ▸t ∷ walk ρ v
-
-    γ=γ′ : ∀ {n l} (ρ : Wk m n) (γs : Vec (Conₘ n) l) → sumᶜ (map (wkConₘ ρ) γs) ≡ wkConₘ ρ (sumᶜ γs)
-    γ=γ′ ρ [] = sym (wk-𝟘ᶜ ρ)
-    γ=γ′ ρ (γ ∷ γs) rewrite wk-+ᶜ {γ = γ} {δ = sumᶜ γs} ρ = cong (_ +ᶜ_) (γ=γ′ ρ γs)
-
-    -- t≡t′ : ∀ {n l} (ρ : Wk m n) (ts : Vec (Term n) l) → map (wk ρ) ts ≡ wkArgs ρ ts
-    -- t≡t′ ρ [] = refl
-    -- t≡t′ ρ (t ∷ ts) rewrite t≡t′ ρ ts = refl
 
 infixr 45 _·ᶜ_
 _·ᶜ_ : (p : M) (γ : Conₘ n) → Conₘ n
@@ -323,23 +321,25 @@ _▶_ {n = n} Ψ σ =
   open import Relation.Binary.Reasoning.Syntax
   open Relation.Binary.PropositionalEquality.≡-Reasoning
 
+<*-sumᶜ : ∀ {n l σ} (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ) (γs : Vec (Conₘ n) l)
+      → sumᶜ (map (_<* Ψ) γs) ≡ sumᶜ γs <* Ψ
+<*-sumᶜ Ψ Ψ▶σ [] = sym (<*-zeroˡ Ψ)
+<*-sumᶜ Ψ Ψ▶σ (γ ∷ γs) rewrite <*-distrib-+ᶜ Ψ γ (sumᶜ γs) = cong (_ +ᶜ_) (<*-sumᶜ Ψ Ψ▶σ γs)
+
 substₘ-lemma :
   (Ψ : Substₘ m n) →
   Ψ ▶ σ → γ ▸ t → substₘ Ψ γ ▸ t [ σ ]
 substₘ-lemma Ψ Ψ▶σ var = Ψ▶σ _
 substₘ-lemma Ψ Ψ▶σ (sub γ▸t x) = sub (substₘ-lemma Ψ Ψ▶σ γ▸t) (<*-monotone Ψ x)
 substₘ-lemma Ψ Ψ▶σ (agent {_} {γs} {ts} α v) =
-  subst₂ _▸_ (γ=γ′ Ψ Ψ▶σ γs) refl (agent α (walk Ψ Ψ▶σ v))
+  subst (_▸ _) (<*-sumᶜ Ψ Ψ▶σ γs) (agent α (walk Ψ Ψ▶σ v))
   where
-    walk : ∀ {n l σ} {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l} → (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ)
-      → Pointwise _▸_ γs ts → Pointwise _▸_ (map (substₘ Ψ) γs) (ts [ σ ]ᵃ)
+    walk : ∀ {n l σ} {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l}
+      → (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ)
+      → Pointwise _▸_ γs ts
+      → Pointwise _▸_ (map (substₘ Ψ) γs) (ts [ σ ]ᵃ)
     walk Ψ Ψ▶σ [] = []
     walk Ψ Ψ▶σ (γ▸t ∷ v) = substₘ-lemma Ψ Ψ▶σ γ▸t ∷ walk Ψ Ψ▶σ v
-
-    γ=γ′ : ∀ {n l σ} (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ) (γs : Vec (Conₘ n) l)
-      → sumᶜ (map (substₘ Ψ) γs) ≡ substₘ Ψ (sumᶜ γs)
-    γ=γ′ Ψ Ψ▶σ [] = sym (<*-zeroˡ Ψ)
-    γ=γ′ Ψ Ψ▶σ (γ ∷ γs) rewrite <*-distrib-+ᶜ Ψ γ (sumᶜ γs) = cong (_ +ᶜ_) (γ=γ′ Ψ Ψ▶σ γs)
 
 -- data Equation {n : ℕ} : (t u : Term n) → Set where
 --   _＝_ : (t u : Term n) → Equation t u
