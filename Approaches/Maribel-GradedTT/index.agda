@@ -1,7 +1,9 @@
 open import Data.Nat using (ℕ; suc) renaming (_+_ to _+ⁿ_)
 open import Data.Fin using (Fin; _↑ˡ_; _↑ʳ_; inject≤) renaming (suc to _+1)
 open import Data.Fin.Patterns
-open import Data.Vec using (Vec; _∷_; []; map; _++_)
+open import Data.Fin.Properties using (_≟_)
+open import Relation.Nullary
+open import Data.Vec using (Vec; _∷_; []; map; _++_; lookup; updateAt)
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; sym; subst; refl; cong; subst₂; trans; cong₂)
 open import Relation.Nullary.Negation
 open import Data.Product hiding (map; _<*>_)
@@ -65,6 +67,9 @@ variable
   x y : Fin n
   t u v w z : Term n
 
+  γs δs : Vec (Conₘ n) l
+  ts us args : Vec (Term n) l
+
 ≈ᶜ-refl : γ ≈ᶜ γ
 ≈ᶜ-refl {_} {ε} = ε
 ≈ᶜ-refl {_} {γ ∙ p} = ≈ᶜ-refl ∙ refl
@@ -120,6 +125,9 @@ data _▸_ {n : ℕ} : (γ : Conₘ n) → Term n → Set where
     → ⦃ l≡ : l ≡ arity α ⦄
     → (args : Pointwise _▸_ γs ts)
     → sumᶜ γs ▸ α ⟨ ts ⟩
+
+_▸⁺_ : (γs : Vec (Conₘ n) l) (ts : Vec (Term n) l) → Set
+γs ▸⁺ ts = Pointwise _▸_ γs ts
 
 Conₘ-is-valid : (γ : Conₘ n) → Set
 Conₘ-is-valid γ = ∀ x → ¬ x ◂ ω ∈ γ
@@ -198,8 +206,8 @@ wkUsage ρ (agent {_} {γs} {ts} α v) =
   where
     walk : ∀ {n l} {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l}
       → (ρ : Wk m n)
-      → Pointwise _▸_ γs ts
-      → Pointwise _▸_ (map (wkConₘ ρ) γs) (wkArgs ρ ts)
+      → γs ▸⁺ ts
+      → map (wkConₘ ρ) γs ▸⁺ wkArgs ρ ts
     walk ρ [] = []
     walk ρ (γ▸t ∷ v) = wkUsage ρ γ▸t ∷ walk ρ v
 
@@ -327,7 +335,7 @@ _▶_ {n = n} Ψ σ =
 <*-sumᶜ Ψ Ψ▶σ (γ ∷ γs) rewrite <*-distrib-+ᶜ Ψ γ (sumᶜ γs) = cong (_ +ᶜ_) (<*-sumᶜ Ψ Ψ▶σ γs)
 
 substₘ-lemma :
-  (Ψ : Substₘ m n) →
+  ∀ (Ψ : Substₘ m n) →
   Ψ ▶ σ → γ ▸ t → substₘ Ψ γ ▸ t [ σ ]
 substₘ-lemma Ψ Ψ▶σ var = Ψ▶σ _
 substₘ-lemma Ψ Ψ▶σ (sub γ▸t x) = sub (substₘ-lemma Ψ Ψ▶σ γ▸t) (<*-monotone Ψ x)
@@ -336,14 +344,62 @@ substₘ-lemma Ψ Ψ▶σ (agent {_} {γs} {ts} α v) =
   where
     walk : ∀ {n l σ} {γs : Vec (Conₘ n) l} {ts : Vec (Term n) l}
       → (Ψ : Substₘ m n) (Ψ▶σ : Ψ ▶ σ)
-      → Pointwise _▸_ γs ts
-      → Pointwise _▸_ (map (substₘ Ψ) γs) (ts [ σ ]ᵃ)
+      → γs ▸⁺ ts
+      → map (substₘ Ψ) γs ▸⁺ (ts [ σ ]ᵃ)
     walk Ψ Ψ▶σ [] = []
     walk Ψ Ψ▶σ (γ▸t ∷ v) = substₘ-lemma Ψ Ψ▶σ γ▸t ∷ walk Ψ Ψ▶σ v
 
--- data Equation {n : ℕ} : (t u : Term n) → Set where
---   _＝_ : (t u : Term n) → Equation t u
---   eq-sym : Equation t u → Equation u t
+data Equation (n : ℕ) : (t u : Term n) → Set where
+  _＝_ : (t u : Term n) → Equation n t u
+  -- eq-sym : Equation t u → Equation u t
+
+Equation′ : ℕ → Set
+Equation′ = ∃₂ ∘ Equation
+
+pattern _＝′_ t u = _ , _ , t ＝ u
+
+_/_▸ᵉ_ : (γ δ : Conₘ n) → Equation′ n → Set
+γ / δ ▸ᵉ (t ＝′ u) = (γ ▸ t) × (δ ▸ u)
+
+_▸ᵉ⁺_ : (γs : Vec (Conₘ n × Conₘ n) l) → Vec (Equation′ n) l → Set
+γs ▸ᵉ⁺ es = Pointwise (λ{(γ , δ) e → γ / δ ▸ᵉ e}) γs es
+
+sumᶜᵉ : (γs : Vec (Conₘ n × Conₘ n) l) → Conₘ n
+sumᶜᵉ γs = sumᶜ (map (uncurry _+ᶜ_) γs)
+-- open import Data.List as List using (List; []; _∷_)
+-- 𝒩 : Term n → List (Fin n)
+-- 𝒩 (var x) = x ∷ []
+-- 𝒩 (α ⟨ args ⟩) = walk args where
+--   walk : ∀ {l} (args : Vec (Term n) l) → List (Fin n)
+--   walk [] = []
+--   walk (arg ∷ args) = (𝒩 arg) List.++ (walk args)
+
+substVar : Fin n → Term n → Subst n n
+substVar x u y with x ≟ y
+... | yes refl = u
+... | no ¬p = var y
+
+open import Data.Vec.Membership.Propositional
+open import Data.Vec.Relation.Unary.Any
+open import Data.Sum
+indirection : ∀ γs (e : Equation n (var x) t)
+  → (es : Vec (Equation′ n) (1+ l))
+  → γs ▸ᵉ⁺ es
+  → (
+      ((x ◂ 𝟚 ∈ (sumᶜᵉ γs)) × (-, -, e) ∈ es)
+      ⊎ ((x ◂ 𝟙 ∈ (sumᶜᵉ γs)) × (-, -, e) ∈ es)
+      ⊎ (x ◂ 𝟙 ∈ (sumᶜᵉ γs))
+  )
+  -- → (-, -, e) ∈ es
+  → Vec (Equation′ n) l
+indirection γs e es γs▸es (inj₁ (𝟚∈ , e∈)) = {!   !}
+indirection γs e (x ∷ es) γs▸es (inj₂ (inj₁ (𝟙∈ , here refl))) = es
+indirection γs e (x ∷ es) γs▸es (inj₂ (inj₁ (𝟙∈ , there e∈))) = {!   !}
+indirection γs e es γs▸es (inj₂ (inj₂ 𝟙∈)) = {!   !}
+-- indirection _ [] = []
+-- indirection ((var x) ＝ t) ((u , v , _) ∷ es) =
+--   (-, -, t [ substVar x t ] ＝ u [ substVar x t ]) ∷ indirection ((var x) ＝ t) es
+
 
 -- -- Rule
 -- record _⋈_ (α β : Agent) : Set where
@@ -360,7 +416,7 @@ substₘ-lemma Ψ Ψ▶σ (agent {_} {γs} {ts} α v) =
 --     rules : ∀ α β → α ⋈ β
 --     {nᶜ lʰ lᵉ} : ℕ
 --     head : Vec (Term nᶜ) lʰ
---     body : Vec (∃₂ (Equation {nᶜ})) lᵉ
+--     body : Vec (∃₂ (Equation nᶜ)) lᵉ
 --     γsʰ : Vec (Conₘ nᶜ) lʰ
 --     γsᵇ : Vec (Conₘ nᶜ × Conₘ nᶜ) lᵉ
 --     γsʰ▸head : Pointwise _▸_ γsʰ head
@@ -371,4 +427,38 @@ substₘ-lemma Ψ Ψ▶σ (agent {_} {γs} {ts} α v) =
 --   γᶜ = γʰ +ᶜ γᵇ
 
 --   field
---     well-used : Conₘ-is-valid γᶜ 
+--     well-used : Conₘ-is-valid γᶜ
+
+-- variable
+--   c c′ : Configuration
+
+-- indirectionUpdate : ∀ (c : Configuration) (i : Fin n) → Configuration
+-- indirectionUpdate c i =
+--   record
+--     { rules = rules
+--     ; head = head
+--     ; body = updateAt body {!   !} λ{(u , v , e) → u [ {!   !} ] , v , {!   !}}
+--     ; γsʰ = γsʰ
+--     ; γsᵇ = {!   !}
+--     ; γsʰ▸head = γsʰ▸head
+--     ; γsᵇ▸body = {!   !}
+--     ; well-used = {!   !}
+--     }
+--   where
+--   open Configuration c
+
+-- open import Data.List.Membership.Propositional
+-- data _⟶_ : (c c′ : Configuration) → Set where
+--   -- indirection : ∀ {x : Fin n} {t u v : Term n}
+--   --   → x ∈ 𝒩 u
+--   --   → Equation (var x) t
+--   --   → Equation u v
+--   --   → {!   !}
+--   indirection : ∀ {c : Configuration} {i i′ x′}
+--     -- → (open Configuration c)
+--     → (let x , t , e = lookup (Configuration.body c) i)
+--     → (let u , v , e′ = lookup (Configuration.body c) i′)
+--     → x ≡ var x′
+--     → x′ ∈ 𝒩 u
+--     → c ⟶ indirectionUpdate c x′
+   
